@@ -350,20 +350,11 @@ class Leaderboard(db.Model):
 
 
 
+
+
+
 # God Leaderboard Model
 class GodLeaderboard(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    school = db.Column(db.String(100), nullable=False)
-    nickname = db.Column(db.String(100), nullable=False)
-    score = db.Column(db.Integer, nullable=False)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-
-    def __repr__(self):
-        return f"GodLeaderboard('{self.nickname}', '{self.score}')"
-
-
-# Super God Leaderboard Model
-class SuperGodLeaderboard(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     school = db.Column(db.String(100), nullable=False)
     nickname = db.Column(db.String(100), nullable=False)
@@ -372,13 +363,16 @@ class SuperGodLeaderboard(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
     def __repr__(self):
-        return f"SuperGodLeaderboard('{self.nickname}', '{self.score}')"
+        return f"GodLeaderboard('{self.nickname}', '{self.score}')"
 
 
 @app.route('/divine_power')
 def divine_power_page():
     # DEBUG: Returning a simple string to isolate the error.
     return "This is a test. If you see this, the route is working."
+
+
+
 
 
 @app.route('/god_mode')
@@ -388,111 +382,8 @@ def god_mode():
     return render_template('god_mode.html')
 
 
-@app.route('/super_god_mode')
-def super_god_mode():
-    db.session.add(GameLog(mode='super_god'))
-    db.session.commit()
-    return render_template('super_god_mode.html')
-
-
-def obfuscate_name(name):
-    name = name.strip()
-    
-    # 공백을 제외한 실제 글자의 인덱스를 찾습니다.
-    char_indices = [i for i, char in enumerate(name) if char != ' ']
-    num_chars = len(char_indices)
-
-    # 실제 글자 수가 4개 이하인 경우, 1개만 'O'으로 바꿉니다.
-    if num_chars <= 4:
-        if num_chars <= 1:
-            return name
-        # 가릴 글자의 인덱스를 하나 선택합니다.
-        index_to_hide = random.choice(char_indices)
-        return ''.join(['O' if i == index_to_hide else char for i, char in enumerate(name)])
-
-    # 보여줄 글자의 인덱스 4개를 랜덤으로 선택합니다.
-    indices_to_show = random.sample(char_indices, 4)
-    
-    obfuscated_chars = []
-    for i, char in enumerate(name):
-        # 공백은 그대로 유지합니다.
-        if char == ' ':
-            obfuscated_chars.append(' ')
-        # 선택된 인덱스의 글자는 보여주고, 나머지는 'O'으로 바꿉니다.
-        elif i in indices_to_show:
-            obfuscated_chars.append(char)
-        else:
-            obfuscated_chars.append('O')
-            
-    return "".join(obfuscated_chars)
-
-
 @app.route('/api/quiz/god')
-def god_quiz():
-    try:
-        all_characters = Character.query.all()
-        if len(all_characters) < 4:
-            return jsonify({'error': '퀴즈를 만들려면 최소 4명의 캐릭터가 필요합니다.'}), 400
-
-        questions = []
-        character_pool = list(all_characters)
-
-        # 1. Generate 10 'image_zoom' questions
-        num_to_generate = min(10, len(character_pool))
-        selected_for_zoom = random.sample(character_pool, num_to_generate)
-        for char in selected_for_zoom:
-            character_pool.remove(char)
-            options = [char.name_ko]
-            wrong_answers_pool = [c.name_ko for c in all_characters if c.id != char.id]
-            options.extend(random.sample(wrong_answers_pool, 3))
-            random.shuffle(options)
-            questions.append({
-                'type': 'image_zoom',
-                'image': char.image_file,
-                'options': options,
-                'answer': char.name_ko
-            })
-
-        # 2. Generate 10 'text_obfuscate' questions
-        if not character_pool:
-            character_pool = list(all_characters)
-        selected_for_obfuscate = random.choices(character_pool, k=10)
-        for char in selected_for_obfuscate:
-            options = [char.name_ko]
-            wrong_answers_pool = [c.name_ko for c in all_characters if c.id != char.id]
-            options.extend(random.sample(wrong_answers_pool, 3))
-            random.shuffle(options)
-            obfuscated_options = [obfuscate_name(name) for name in options]
-            questions.append({
-                'type': 'text_obfuscate',
-                'image': char.image_file,
-                'options': options, # Original names for answer checking
-                'obfuscated_options': obfuscated_options, # Obfuscated names for display
-                'answer': char.name_ko
-            })
-        # 3. Generate 5 'memory_game' questions
-        if len(all_characters) >= 2:
-            possible_pairs = list(itertools.combinations(all_characters, 2))
-            num_memory_games = min(5, len(possible_pairs))
-            selected_pairs = random.sample(possible_pairs, num_memory_games)
-            for char1, char2 in selected_pairs:
-                questions.append({
-                    'type': 'memory_game',
-                    'cards': [char1.image_file, char2.image_file]
-                })
-
-        random.shuffle(questions)
-        return jsonify(questions[:25])
-
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': f'서버 내부 오류가 발생했습니다: {e}'}), 500
-        return jsonify({"error": "서버에서 퀴즈를 생성하는 중 오류가 발생했습니다."}), 500
-
-
-@app.route('/api/quiz/super_god')
-def api_quiz_super_god():
+def api_quiz_god():
     try:
         all_characters = Character.query.all()
         
@@ -569,25 +460,6 @@ def api_quiz_super_god():
         return jsonify({'error': f'서버 내부 오류가 발생했습니다: {e}'}), 500
 
 
-@app.route('/api/save_god_score', methods=['POST'])
-def save_god_score():
-    try:
-        data = request.get_json()
-        school = data.get('school')
-        nickname = data.get('nickname')
-        score = data.get('score')
-
-        new_score = GodLeaderboard(school=school, nickname=nickname, score=score)
-        db.session.add(new_score)
-        db.session.commit()
-
-        return jsonify({'success': True})
-    except Exception as e:
-        db.session.rollback()
-        app.logger.error(f'Error saving God Mode score: {e}')
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-
 @app.route('/leaderboard')
 def leaderboard():
     top_scores = Leaderboard.query.order_by(Leaderboard.score.desc(), Leaderboard.time_taken.asc()).limit(10).all()
@@ -613,23 +485,17 @@ def add_score():
 
 @app.route('/god_leaderboard')
 def god_leaderboard():
-    top_scores = GodLeaderboard.query.order_by(GodLeaderboard.score.desc()).limit(20).all()
+    top_scores = GodLeaderboard.query.order_by(GodLeaderboard.score.desc(), GodLeaderboard.time_taken.asc()).limit(10).all()
     return render_template('god_leaderboard.html', scores=top_scores)
 
 
-@app.route('/super_god_leaderboard')
-def super_god_leaderboard():
-    top_scores = SuperGodLeaderboard.query.order_by(SuperGodLeaderboard.score.desc(), SuperGodLeaderboard.time_taken.asc()).limit(10).all()
-    return render_template('super_god_leaderboard.html', scores=top_scores)
-
-
-@app.route('/api/leaderboard/super_god/add', methods=['POST'])
-def add_super_god_score():
+@app.route('/api/leaderboard/god/add', methods=['POST'])
+def add_god_score():
     data = request.get_json()
     if not data or not all(k in data for k in ['school', 'nickname', 'score', 'time_taken']):
         return jsonify({'error': 'Missing data'}), 400
 
-    new_score = SuperGodLeaderboard(
+    new_score = GodLeaderboard(
         school=data['school'],
         nickname=data['nickname'],
         score=int(data['score']),
