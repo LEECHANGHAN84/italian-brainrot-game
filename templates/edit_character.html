@@ -1,0 +1,64 @@
+{% extends "layout.html" %}
+{% block title %}캐릭터 수정{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="text-center my-4">
+        <h1>캐릭터 수정: {{ character.name_ko }}</h1>
+        <a href="{{ url_for('admin') }}" class="btn btn-secondary mt-2">관리자 페이지로 돌아가기</a>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3>캐릭터 정보 수정</h3>
+        </div>
+        <div class="card-body">
+            <form method="POST" enctype="multipart/form-data">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="name_ko" class="form-label">한글 이름</label>
+                        <input type="text" class="form-control" id="name_ko" name="name_ko" value="{{ character.name_ko }}" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="name_en" class="form-label">영어 이름 (선택 사항)</label>
+                        <input type="text" class="form-control" id="name_en" name="name_en" value="{{ character.name_en or '' }}">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="image" class="form-label">새 이미지 업로드 (선택 사항)</label>
+                    <input type="file" class="form-control" id="image" name="image" accept=".png,.jpg,.jpeg,.webp" onchange="previewImage(event)">
+                    <small class="form-text text-muted">새 이미지를 업로드하지 않으면 기존 이미지가 유지됩니다.</small>
+                </div>
+                <div class="mb-3 text-center">
+                    <p>현재 이미지:</p>
+                    <img id="thumbnail-preview" src="{{ url_for('static', filename='uploads/' + character.image_file) }}" alt="이미지 미리보기" class="img-fluid rounded" style="max-height: 200px;">
+                </div>
+                <hr>
+                <h5>추가 퀴즈 (5개)</h5>
+                {% for i in range(1, 6) %}
+                <div class="mb-3">
+                    <label for="question{{i}}" class="form-label">퀴즈 {{i}}</label>
+                    <input type="text" class="form-control" id="question{{i}}" name="question{{i}}" value="{{ character['question' + i|string] or '' }}">
+                </div>
+                {% endfor %}
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary btn-lg">수정 완료</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function previewImage(event) {
+    const reader = new FileReader();
+    reader.onload = function(){
+        const preview = document.getElementById('thumbnail-preview');
+        preview.src = reader.result;
+        preview.style.display = 'block';
+    }
+    reader.readAsDataURL(event.target.files[0]);
+}
+</script>
+{% endblock %}

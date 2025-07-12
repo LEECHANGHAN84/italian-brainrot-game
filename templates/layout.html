@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="ko" class="">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>{% block title %}이탈리안 브레인롯 퀴즈{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Gasoek+One&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+    <style>
+        .mode-title {
+            font-family: 'Gasoek One', sans-serif;
+            font-size: 3.5rem;
+            color: #343a40;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        body {
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 960px;
+        }
+        .image-wrapper {
+            position: relative;
+            display: inline-block; /* Ensures the wrapper fits the image size */
+        }
+        .stamp {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            padding: 20px 40px;
+            border-radius: 20px;
+            font-size: 4rem;
+            font-weight: bold;
+            z-index: 1060; /* Higher than modals */
+            display: none;
+            opacity: 0;
+            transition: all 0.3s ease-in-out;
+            text-shadow: 2px 2px 8px rgba(0,0,0,0.5);
+            color: white;
+            border: 3px solid #fff;
+            white-space: nowrap;
+        }
+        .stamp.show {
+            display: block;
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+        .stamp.correct {
+            background-color: rgba(40, 167, 69, 0.9);
+        }
+        .stamp.incorrect {
+            background-color: rgba(220, 53, 69, 0.9);
+        }
+        .stamp.timeout {
+            background-color: rgba(255, 193, 7, 0.9);
+        }
+
+    </style>
+    <style id="dark-mode-style">
+        .dark-mode body {
+            background-color: #121212;
+            color: #e0e0e0;
+        }
+        .dark-mode .card,
+        .dark-mode #image-container {
+            background-color: #1e1e1e;
+            border-color: rgba(255, 255, 255, 0.2) !important;
+            color: #e0e0e0;
+        }
+        .dark-mode .list-group-item {
+            background-color: #1e1e1e;
+            border-color: rgba(255, 255, 255, 0.1);
+            color: #e0e0e0;
+        }
+        .dark-mode .mode-title {
+            color: #e0e0e0;
+        }
+        .dark-mode .btn-outline-primary {
+            color: #bb86fc;
+            border-color: #bb86fc;
+        }
+        .dark-mode .btn-outline-primary:hover {
+            background-color: #bb86fc;
+            color: #121212;
+        }
+        .dark-mode .btn-primary {
+            background-color: #bb86fc;
+            border-color: #bb86fc;
+            color: #121212;
+        }
+        .dark-mode .btn-secondary {
+            background-color: #333;
+            border-color: #555;
+        }
+        .dark-mode .modal-content {
+            background: linear-gradient(135deg, #2c3e50, #4a6078);
+            color: white;
+        }
+        .dark-mode .form-control {
+            background-color: rgba(255,255,255,0.1);
+            color: white;
+            border-color: rgba(255,255,255,0.2);
+        }
+        .dark-mode label:not(.form-check-label) {
+             color: #ccc !important;
+        }
+        .dark-mode .badge.bg-info,
+        .dark-mode .badge.bg-primary,
+        .dark-mode .badge.bg-secondary {
+            color: #e0e0e0 !important;
+            background-color: #333 !important;
+        }
+        .dark-mode .form-check-label,
+        .dark-mode .leaderboard-title,
+        .dark-mode .leaderboard-description,
+        .dark-mode .leaderboard-entry,
+        .dark-mode td,
+        .dark-mode th {
+            color: #e0e0e0 !important;
+        }
+    </style>
+</head>
+<body>
+
+
+    <main class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        (function () {
+            const theme = localStorage.getItem('theme') || 'light'; // Default to light
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark-mode');
+            } else {
+                document.documentElement.classList.remove('dark-mode');
+            }
+        })();
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,152 @@
+{% extends "layout.html" %}
+{% block title %}초고수 모드{% endblock %}
+
+{% block content %}
+<div class="text-center">
+    <h1 class="mb-2">초고수 모드</h1>
+    <p class="lead mb-4">질문을 읽고 알맞은 캐릭터 이름을 직접 입력하세요.</p>
+</div>
+
+<div class="card w-75 mx-auto" id="quiz-card">
+    <div class="card-body">
+        <div class="card-text text-center my-5 fs-4" id="question-container" style="min-height: 100px;">
+            <!-- Question will be loaded here -->
+        </div>
+        <div id="message-container" class="text-center mb-3" style="height: 30px;">
+            <!-- Messages like 'Correct!' or 'Wrong!' will appear here -->
+        </div>
+        <div id="stamp-feedback" class="stamp"></div>
+        <form id="answer-form">
+            <div class="input-group mb-3">
+                <input type="text" id="answer-input" class="form-control" placeholder="캐릭터 이름을 입력하세요..." required autocomplete="off">
+                <button class="btn btn-primary" type="submit" id="submit-button">제출</button>
+            </div>
+        </form>
+        <div class="text-center mt-3">
+            <button id="next-button" class="btn btn-info d-none">다음 문제</button>
+        </div>
+        <div id="score-container" class="text-center mt-3">
+            <h4 id="score">Score: 0</h4>
+        </div>
+    </div>
+</div>
+
+<div id="loading-error" class="alert alert-danger text-center w-75 mx-auto d-none">
+    <!-- Error message will be shown here -->
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const questionContainer = document.getElementById('question-container');
+    const messageContainer = document.getElementById('message-container');
+    const answerForm = document.getElementById('answer-form');
+    const answerInput = document.getElementById('answer-input');
+    const submitButton = document.getElementById('submit-button');
+    const nextButton = document.getElementById('next-button');
+    const quizCard = document.getElementById('quiz-card');
+    const loadingError = document.getElementById('loading-error');
+    const stampFeedback = document.getElementById('stamp-feedback');
+    const scoreContainer = document.getElementById('score-container');
+    const scoreElement = document.getElementById('score');
+
+    let currentCharacterId = null;
+    let score = 0;
+    let isAnswered = false;
+    let timer = null;
+
+    async function fetchQuiz() {
+        // Reset UI
+        messageContainer.innerHTML = '';
+        nextButton.classList.add('d-none');
+        answerInput.value = '';
+        answerInput.disabled = false;
+        submitButton.disabled = false;
+        quizCard.classList.remove('d-none');
+        loadingError.classList.add('d-none');
+        questionContainer.innerHTML = '<div class="d-flex justify-content-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+
+        try {
+            // Re-uses the intermediate API endpoint
+            const response = await fetch('/api/quiz/intermediate'); 
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || '퀴즈 데이터를 불러오는 데 실패했습니다.');
+            }
+            const data = await response.json();
+            renderQuiz(data);
+        } catch (error) {
+            console.error('Error fetching quiz:', error);
+            quizCard.classList.add('d-none');
+            loadingError.textContent = error.message;
+            loadingError.classList.remove('d-none');
+        }
+    }
+
+    function renderQuiz(data) {
+        currentCharacterId = data.character_id;
+        questionContainer.textContent = `Q. ${data.question}`;
+        isAnswered = false;
+        timer = setTimeout(() => {
+            handleTimeout();
+        }, 3000);
+    }
+
+        async function checkAnswer(event) {
+        if(event) event.preventDefault();
+        if (isAnswered) return;
+        isAnswered = true;
+
+        clearTimeout(timer);
+        const userAnswer = answerInput.value;
+        
+        answerInput.disabled = true;
+        submitButton.disabled = true;
+
+        const response = await fetch('/api/check/intermediate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ character_id: currentCharacterId, user_answer: userAnswer }),
+        });
+        const result = await response.json();
+
+        if (result.correct) {
+            score += 4;
+            showStamp('correct', '정답 +4');
+        } else {
+            score -= 4;
+            showStamp('incorrect', '실패 -4');
+            messageContainer.innerHTML = `<h5 class="text-danger mt-2">정답: ${result.correct_answer}</h5>`;
+        }
+        scoreElement.textContent = `Score: ${score}`;
+        nextButton.classList.remove('d-none');
+    }
+
+    function handleTimeout() {
+        if (isAnswered) return;
+        isAnswered = true;
+        
+        answerInput.disabled = true;
+        submitButton.disabled = true;
+
+        score -= 5;
+        scoreElement.textContent = `Score: ${score}`;
+        showStamp('timeout', '시간초과 -5');
+        nextButton.classList.remove('d-none');
+    }
+
+    function showStamp(type, text) {
+        const stamp = document.getElementById('stamp-feedback');
+        stamp.textContent = text;
+        stamp.className = `stamp ${type} show`;
+        setTimeout(() => {
+            stamp.className = 'stamp';
+        }, 1200);
+    }
+
+    answerForm.addEventListener('submit', checkAnswer);
+    nextButton.addEventListener('click', fetchQuiz);
+
+    document.addEventListener('DOMContentLoaded', fetchQuiz);
+</script>
+{% endblock %}

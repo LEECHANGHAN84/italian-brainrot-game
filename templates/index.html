@@ -1,0 +1,221 @@
+{% extends "layout.html" %}
+{% block title %}게임 모드 선택{% endblock %}
+{% block content %}
+<div class="text-center">
+    <h1 class="game-title mb-4 mt-5">이탈리안 브레인롯 <span class="highlight">캐릭터 퀴즈</span></h1>
+    <p class="lead mb-5 subtitle">플레이할 난이도를 선택하세요</p>
+    
+    <div class="leaderboard-buttons mb-5">
+        <a href="{{ url_for('leaderboard') }}" class="btn btn-leaderboard btn-outline-warning btn-lg px-4">
+            <i class="fas fa-trophy me-2"></i>신 명예의 전당
+        </a>
+        <a href="{{ url_for('super_god_leaderboard') }}" class="btn btn-leaderboard btn-outline-danger btn-lg px-4">
+            <i class="fas fa-crown me-2"></i>초신 명예의 전당
+        </a>
+    </div>
+
+    <style>
+    /* 전체 페이지 스타일 */
+    body {
+        font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
+    }
+    
+    /* 게임 타이틀 스타일 */
+    .game-title {
+        font-family: 'Gasoek One', sans-serif;
+        font-size: 3.2rem;
+        letter-spacing: -0.5px;
+        margin-bottom: 1rem;
+        background: linear-gradient(45deg, #ff6b6b, #f06595);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        text-shadow: 3px 3px 6px rgba(0,0,0,0.1);
+    }
+    
+    .game-title .highlight {
+        position: relative;
+        color: #e83e8c;
+        text-shadow: none;
+    }
+    
+    .subtitle {
+        font-size: 1.4rem;
+        font-weight: 300;
+        color: #6c757d;
+        margin-bottom: 2rem;
+    }
+    
+    /* 명예의 전당 버튼 스타일 */
+    .leaderboard-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 1.5rem;
+        margin-bottom: 3rem;
+    }
+    
+    .btn-leaderboard {
+        border-radius: 50px;
+        padding: 0.8rem 2rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .btn-leaderboard:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    }
+    
+    /* 모드 버튼 스타일 */
+    .mode-btn {
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        font-size: 1.3rem;
+        font-weight: 600;
+        white-space: normal;
+        line-height: 1.2;
+        border-radius: 16px;
+        transition: all 0.3s ease;
+        box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+        border: none;
+    }
+    
+    .mode-btn:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 15px rgba(0,0,0,0.15);
+    }
+    
+    .mode-btn i {
+        font-size: 2.8rem;
+        margin-bottom: 0.8rem;
+    }
+    
+    /* 테마 스위치 스타일 */
+    .theme-switch-wrapper {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        display: flex;
+        align-items: center;
+        z-index: 100;
+    }
+    
+    .form-check-input {
+        width: 3rem;
+        height: 1.5rem;
+        cursor: pointer;
+    }
+    
+    .form-check-label {
+        margin-left: 0.5rem;
+        cursor: pointer;
+    }
+    
+    /* 관리자 버튼 스타일 */
+    .admin-button {
+        margin-top: 3rem;
+        opacity: 0.7;
+        transition: opacity 0.3s ease;
+    }
+    
+    .admin-button:hover {
+        opacity: 1;
+    }
+</style>
+
+<div class="row g-4 justify-content-center">
+        <div class="col-6 col-md-4 col-lg-3">
+            <a href="{{ url_for('super_beginner_mode') }}" class="btn btn-primary mode-btn">
+                <i class="fas fa-brain"></i>
+                <span>초초보 모드</span>
+            </a>
+        </div>
+        <div class="col-6 col-md-4 col-lg-3">
+            <a href="{{ url_for('beginner_mode') }}" class="btn btn-success mode-btn">
+                <i class="fas fa-book-open"></i>
+                <span>초보 모드</span>
+            </a>
+        </div>
+        <div class="col-6 col-md-4 col-lg-3">
+            <a href="{{ url_for('intermediate_mode') }}" class="btn btn-warning mode-btn">
+                <i class="fas fa-pencil-alt"></i>
+                <span>중수 모드</span>
+            </a>
+        </div>
+        <div class="col-6 col-md-4 col-lg-3">
+            <a href="{{ url_for('advanced_mode') }}" class="btn btn-danger mode-btn">
+                <i class="fas fa-trophy"></i>
+                <span>고수 모드</span>
+            </a>
+        </div>
+        <div class="col-6 col-md-4 col-lg-3">
+            <a href="{{ url_for('super_advanced_mode') }}" class="btn btn-dark mode-btn">
+                <i class="fas fa-crown"></i>
+                <span>초고수 모드</span>
+            </a>
+        </div>
+        <div class="col-6 col-md-4 col-lg-3">
+            <a href="{{ url_for('god_mode') }}" class="btn btn-info mode-btn">
+                <i class="fas fa-bolt"></i>
+                <span>신 모드</span>
+            </a>
+        </div>
+        <div class="col-6 col-md-4 col-lg-3">
+            <a href="{{ url_for('super_god_mode') }}" class="btn mode-btn" style="background: linear-gradient(135deg, #e83e8c, #fd7e14); color: white;">
+                <i class="fas fa-meteor"></i>
+                <span>초신 모드</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="theme-switch-wrapper">
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch" id="themeSwitch">
+            <label class="form-check-label" for="themeSwitch"><i class="fas fa-moon"></i></label>
+        </div>
+    </div>
+    
+    <div class="container text-center admin-button">
+        <a href="/admin" class="btn btn-outline-secondary btn-sm">관리자</a>
+    </div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const themeSwitch = document.getElementById('themeSwitch');
+        const themeIcon = document.querySelector('label[for="themeSwitch"] i');
+        const currentTheme = localStorage.getItem('theme') || 'light';
+
+        function setTheme(theme) {
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark-mode');
+                themeSwitch.checked = true;
+                if(themeIcon) themeIcon.className = 'fas fa-sun';
+            } else {
+                document.documentElement.classList.remove('dark-mode');
+                themeSwitch.checked = false;
+                if(themeIcon) themeIcon.className = 'fas fa-moon';
+            }
+        }
+
+        setTheme(currentTheme);
+
+        themeSwitch.addEventListener('change', function() {
+            let theme = 'light';
+            if (this.checked) {
+                theme = 'dark';
+            }
+            localStorage.setItem('theme', theme);
+            setTheme(theme);
+        });
+    });
+</script>
+{% endblock %}

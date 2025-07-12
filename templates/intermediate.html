@@ -1,0 +1,167 @@
+{% extends "layout.html" %}
+{% from "macros/quiz_ui.html" import render_quiz_ui %}
+
+{% block title %}중수 모드{% endblock %}
+
+{% block content %}
+    {% call render_quiz_ui('중수 모드', show_timer=False) %}
+        <div id="options-container" class="row g-3 col-10 mx-auto">
+            <!-- Buttons will be inserted here by JavaScript -->
+        </div>
+    {% endcall %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // --- DOM Elements ---
+    const scoreDisplay = document.getElementById('score');
+    const quizArea = document.getElementById('quiz-area');
+    const loadingScreen = document.getElementById('loading-screen');
+    const resultScreen = document.getElementById('result-screen');
+    const finalScoreDisplay = document.getElementById('final-score');
+    const correctAnswersDisplay = document.getElementById('correct-answers');
+    const totalQuestionsDisplay = document.getElementById('total-questions');
+    const optionsContainer = document.getElementById('options-container');
+    const characterImage = document.getElementById('character-image');
+    const progressBar = document.getElementById('progress-bar');
+
+    // --- Game State ---
+    let score = 0;
+    let questions = [];
+    let currentQuestionIndex = 0;
+    let correctAnswers = 0;
+
+    // --- Core Functions ---
+    async function startQuiz() {
+        loadingScreen.style.display = 'block';
+        quizArea.style.display = 'none';
+        resultScreen.style.display = 'none';
+        try {
+            const response = await fetch('/api/quiz/intermediate');
+            if (!response.ok) {
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.indexOf('application/json') !== -1) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `서버 오류: ${response.status}`);
+                } else {
+                    const errorText = await response.text();
+                    console.error("서버로부터 받은 비-JSON 응답:", errorText);
+                    throw new Error(`퀴즈 데이터를 불러오는 중 서버에서 오류가 발생했습니다 (상태: ${response.status}).`);
+                }
+            }
+            questions = await response.json();
+            if (questions.length === 0) {
+                throw new Error('표시할 퀴즈가 없습니다.');
+            }
+            // Reset state for a new game
+            currentQuestionIndex = 0;
+            score = 0;
+            correctAnswers = 0;
+            scoreDisplay.textContent = score;
+            
+            loadingScreen.style.display = 'none';
+            quizArea.style.display = 'block';
+            showNextQuestion();
+        } catch (error) {
+            loadingScreen.innerHTML = `<p class="text-danger">${error.message}</p><a href="{{ url_for('index') }}" class="btn btn-primary">메인으로</a>`;
+        }
+    }
+
+    function showNextQuestion() {
+        if (currentQuestionIndex >= questions.length) {
+            endQuiz();
+            return;
+        }
+        const question = questions[currentQuestionIndex];
+        characterImage.src = `/static/uploads/${question.image}`;
+        optionsContainer.innerHTML = ''; // Clear previous options
+
+        question.options.forEach((optionText, index) => {
+            const buttonWrapper = document.createElement('div');
+            buttonWrapper.className = 'col-6 d-grid';
+
+            const button = document.createElement('button');
+            button.className = 'btn btn-lg btn-primary';
+            button.textContent = `${index + 1}. ${optionText}`;
+            button.dataset.answer = optionText; // 정답 비교를 위해 데이터 속성 추가
+            button.onclick = () => checkAnswer(button, question.answer);
+            
+            buttonWrapper.appendChild(button);
+            optionsContainer.appendChild(buttonWrapper);
+        });
+        
+        updateProgressBar();
+    }
+
+    function checkAnswer(selectedButton, correctAnswer) {
+        const allButtons = optionsContainer.querySelectorAll('button');
+        const selectedAnswerName = selectedButton.dataset.answer;
+
+        // Disable all buttons and reveal the correct answer
+        allButtons.forEach(btn => {
+            btn.disabled = true;
+            const btnName = btn.dataset.answer;
+            if (btnName === correctAnswer) {
+                btn.classList.remove('btn-outline-primary');
+                btn.classList.add('btn-success');
+            }
+        });
+
+        // Check if the user was correct
+        if (selectedAnswerName === correctAnswer) {
+            score += 5; // 정답일 경우 5점 추가
+            correctAnswers++;
+            scoreDisplay.textContent = score;
+            showUnifiedStamp('정답 +5', true);
+        } else {
+            showUnifiedStamp('실패', false);
+        }
+        
+        currentQuestionIndex++;
+        setTimeout(showNextQuestion, 1200);
+    }
+
+    function updateProgressBar() {
+        const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+        progressBar.style.width = `${progress}%`;
+        progressBar.textContent = `${currentQuestionIndex + 1} / ${questions.length}`;
+    }
+
+    function endQuiz() {
+        quizArea.style.display = 'none';
+        resultScreen.style.display = 'block';
+        finalScoreDisplay.textContent = score;
+        correctAnswersDisplay.textContent = correctAnswers;
+        totalQuestionsDisplay.textContent = questions.length;
+        
+        const endButtons = document.getElementById('end-buttons');
+        endButtons.innerHTML = ''; // Clear previous buttons
+
+        // 80점 이상이면 '고수 모드' 버튼 추가
+        if (score >= 80) {
+            const nextModeBtn = document.createElement('a');
+            nextModeBtn.href = "{{ url_for('advanced_mode') }}";
+            nextModeBtn.className = 'btn btn-success btn-lg me-3';
+            nextModeBtn.innerHTML = '<i class="fas fa-arrow-right me-2"></i> 고수 모드 도전';
+            endButtons.appendChild(nextModeBtn);
+        }
+
+        // 다시하기 버튼
+        const restartBtn = document.createElement('a');
+        restartBtn.href = "{{ url_for('intermediate_mode') }}";
+        restartBtn.className = 'btn btn-primary btn-lg me-3';
+        restartBtn.innerHTML = '<i class="fas fa-redo me-2"></i> 다시하기';
+        endButtons.appendChild(restartBtn);
+
+        // 메인 메뉴 버튼
+        const mainMenuBtn = document.createElement('a');
+        mainMenuBtn.href = "{{ url_for('index') }}";
+        mainMenuBtn.className = 'btn btn-secondary btn-lg';
+        mainMenuBtn.innerHTML = '<i class="fas fa-home me-2"></i> 메인 메뉴로';
+        endButtons.appendChild(mainMenuBtn);
+    }
+
+    // --- Event Listener ---
+    document.addEventListener('DOMContentLoaded', startQuiz);
+</script>
+{% endblock %}

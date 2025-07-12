@@ -1,0 +1,485 @@
+{% extends "layout.html" %}
+{% from "macros/quiz_ui.html" import render_quiz_ui %}
+{% from "macros/stamp_macro.html" import stamp_system %}
+
+{% block title %}신 모드{% endblock %}
+
+{% block content %}
+<style>
+    /* 타이머 스타일 */
+    .timer-container {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        justify-content: center;
+        margin-bottom: 1rem;
+    }
+    #timer-bar-container {
+        width: 200px;
+        height: 15px;
+        background-color: #e9ecef;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    #timer-bar {
+        height: 100%;
+        width: 100%;
+        background-color: #17a2b8; /* info color */
+        transition: width 1s linear;
+    }
+
+    #character-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.5s ease-in-out;
+    }
+
+    /* 이미지 줌 효과를 위한 CSS */
+    .image-container.zoomed #character-image {
+        transform: scale(2);
+    }
+    .image-container.zoomed[data-segment="0"] #character-image { transform-origin: top left; }
+    .image-container.zoomed[data-segment="1"] #character-image { transform-origin: top right; }
+    .image-container.zoomed[data-segment="2"] #character-image { transform-origin: bottom left; }
+    .image-container.zoomed[data-segment="3"] #character-image { transform-origin: bottom right; }
+    
+    /* 메모리 게임 스타일 */
+    .memory-game-container {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        grid-gap: 15px;
+        max-width: 500px;
+        margin: 0 auto 20px;
+    }
+    
+    .memory-card {
+        position: relative;
+        height: 180px;
+        cursor: pointer;
+        transform-style: preserve-3d;
+        -webkit-transform-style: preserve-3d;
+        -moz-transform-style: preserve-3d;
+        transform: scale(1);
+        -webkit-transform: scale(1);
+        transition: transform .3s, -webkit-transform .3s;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    
+    .memory-card:active {
+        transform: scale(0.95);
+    }
+    
+    .memory-card.flip {
+        transform: rotateY(180deg);
+        -webkit-transform: rotateY(180deg);
+        -moz-transform: rotateY(180deg);
+    }
+    
+    .memory-card-front, .memory-card-back {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        padding: 5px;
+        border-radius: 10px;
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+    }
+    
+    .memory-card-front {
+        background-color: #5f27cd;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 2rem;
+        color: white;
+    }
+    
+    .memory-card-back {
+        transform: rotateY(180deg);
+        -webkit-transform: rotateY(180deg);
+        -moz-transform: rotateY(180deg);
+        background-color: white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    .memory-card-back img {
+        width: 90%;
+        height: 90%;
+        object-fit: contain;
+        border-radius: 8px;
+    }
+    
+    /* 글자 가리기 스타일은 버튼 생성 시 인라인으로 처리됩니다. */
+</style>
+
+<!-- User Info Modal -->
+<div class="modal fade" id="userInfoModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="userInfoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content text-white" style="background: linear-gradient(135deg, #2c3e50, #4a6078); border: none;">
+            <div class="modal-header border-0">
+                <h5 class="modal-title w-100 text-center" id="userInfoModalLabel">
+                    <i class="fas fa-crown me-2"></i> 신 모드 입장
+                </h5>
+            </div>
+            <div class="modal-body">
+                <p class="text-center mb-4">명예의 전당에 당신의 이름을 새기세요.</p>
+                <form id="userInfoForm">
+                    <div class="form-floating mb-3">
+                        <input type="text" class="form-control" id="schoolInput" placeholder="학교" required style="background-color: rgba(255,255,255,0.1); color: white; border-color: rgba(255,255,255,0.2);">
+                        <label for="schoolInput" style="color: #ccc;">학교</label>
+                    </div>
+                    <div class="form-floating mb-4">
+                        <input type="text" class="form-control" id="nicknameInput" placeholder="별명" required style="background-color: rgba(255,255,255,0.1); color: white; border-color: rgba(255,255,255,0.2);">
+                        <label for="nicknameInput" style="color: #ccc;">별명</label>
+                    </div>
+                    <button type="submit" class="btn btn-lg btn-warning w-100 fw-bold">도전 시작!</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="main-content" style="display: none;">
+    {% call render_quiz_ui('신 모드', show_timer=False) %}
+                <div id="quiz-container" class="text-center">
+            <p id="question-text" class="lead fs-4 mb-4"></p>
+            
+            <div id="game-over-container" class="text-center" style="display: none;">
+                <h2>게임 종료!</h2>
+                <h3>최종 점수: <span id="final-score"></span>점</h3>
+                <p>명예의 전당에 이름을 남기세요!</p>
+                <div class="mx-auto" style="max-width: 400px;">
+                    <div class="input-group mb-2">
+                        <span class="input-group-text">소속</span>
+                        <input type="text" id="player-school" class="form-control" placeholder="(예: OO대학교)">
+                    </div>
+                    <div class="input-group mb-3">
+                        <span class="input-group-text">별명</span>
+                        <input type="text" id="player-nickname" class="form-control" placeholder="(예: 이탈리아뇌부자)">
+                    </div>
+                    <button class="btn btn-success w-100" onclick="submitScore()">등록</button>
+                </div>
+                <div class="mt-3">
+                    <a href="/god_mode" class="btn btn-primary">다시하기</a>
+                    <a href="/" class="btn btn-secondary">메인으로</a>
+                </div>
+            </div>
+            <div id="options-container" class="row g-3 col-10 mx-auto">
+                <!-- Buttons will be inserted here by JavaScript -->
+            </div>
+        </div>
+    {% endcall %}
+</div>
+
+<div id="loading-screen" class="text-center mt-5" style="display: none;">
+    <div class="spinner-border text-warning" role="status" style="width: 3rem; height: 3rem;">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-3 fs-5">퀴즈를 불러오는 중...</p>
+</div>
+<div id="error-message" class="alert alert-danger mt-5" style="display: none;"></div>
+{% endblock %}
+
+{% block scripts %}
+{{ stamp_system() }}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const scoreDisplay = document.getElementById('score');
+        const progressBar = document.getElementById('progress-bar');
+        const questionText = document.getElementById('question-text');
+        const imageContainer = document.getElementById('character-image-wrapper'); // Use the macro's container
+        const optionsContainer = document.getElementById('options-container');
+        const loadingScreen = document.getElementById('loading-screen');
+        const quizArea = document.getElementById('quiz-area');
+        const errorMessage = document.getElementById('error-message');
+        const quizContainer = document.getElementById('quiz-container');
+        const gameOverContainer = document.getElementById('game-over-container');
+
+        // --- Game State ---
+        let score = 0;
+        let questions = [];
+        let currentQuestionIndex = 0;
+
+        // --- Utility Functions ---
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        // --- Core Game Logic ---
+        function endGame() {
+            quizContainer.style.display = 'none';
+            gameOverContainer.style.display = 'block';
+            document.getElementById('final-score').textContent = score;
+        }
+
+        // This function is called by the 'submit' button in the game-over container
+        window.submitScore = function() {
+            const school = document.getElementById('player-school').value;
+            const nickname = document.getElementById('player-nickname').value;
+
+            if (!school.trim() || !nickname.trim()) {
+                alert('소속과 별명을 모두 입력해주세요.');
+                return;
+            }
+
+            fetch('/api/save_god_score', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ school: school, nickname: nickname, score: score })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('명예의 전당에 등록되었습니다!');
+                    window.location.href = '/god_leaderboard';
+                } else {
+                    alert('등록에 실패했습니다: ' + (data.error || ''));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('오류가 발생했습니다.');
+            });
+        }
+
+        function checkAnswer(button, correctAnswer) {
+            const isCorrect = button.dataset.answer === correctAnswer;
+            const buttons = optionsContainer.querySelectorAll('button');
+
+            buttons.forEach(btn => {
+                btn.disabled = true;
+                if (btn.dataset.answer === correctAnswer) {
+                    btn.classList.add('btn-success');
+                } else {
+                    btn.classList.add('btn-danger');
+                }
+                btn.classList.remove('btn-primary');
+            });
+
+            if (isCorrect) {
+                score += 4;
+            } else {
+                score -= 4;
+            }
+            scoreDisplay.textContent = score;
+
+            setTimeout(() => {
+                currentQuestionIndex++;
+                loadQuestion();
+            }, 1000);
+        }
+
+        function loadQuestion() {
+            quizContainer.style.display = 'block';
+            gameOverContainer.style.display = 'none';
+
+            if (currentQuestionIndex >= questions.length) {
+                endGame();
+                return;
+            }
+
+            loadingScreen.style.display = 'none';
+            quizArea.style.display = 'block';
+
+            const question = questions[currentQuestionIndex];
+            const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+            progressBar.style.width = `${progress}%`;
+            progressBar.textContent = `${currentQuestionIndex + 1} / ${questions.length}`;
+
+            // Clear previous question's state
+            optionsContainer.innerHTML = '';
+            optionsContainer.className = 'row g-3 col-10 mx-auto'; // Reset class
+            imageContainer.innerHTML = '';
+            imageContainer.style.display = 'block';
+            questionText.textContent = '';
+
+            // Setup quiz based on type
+            switch (question.type) {
+                case 'image_zoom':
+                    setupImageZoomQuiz(question);
+                    break;
+                case 'text_obfuscate':
+                    setupTextObfuscateQuiz(question);
+                    break;
+                case 'memory_game':
+                    setupMemoryGame(question);
+                    break;
+            }
+        }
+
+        async function fetchQuestions() {
+            try {
+                const response = await fetch('/api/quiz/god');
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                }
+                questions = await response.json();
+                if (questions.length === 0) {
+                    throw new Error('서버에서 질문을 가져오지 못했습니다.');
+                }
+                shuffle(questions);
+                loadQuestion();
+            } catch (error) {
+                console.error("Error loading quiz:", error);
+                loadingScreen.style.display = 'none';
+                errorMessage.style.display = 'block';
+                errorMessage.textContent = error.message;
+            }
+        }
+
+        // --- Quiz Type Setup Functions ---
+        function createButtons(originalOptions, correctAnswer, obfuscatedOptions = null) {
+            const displayOptions = obfuscatedOptions || originalOptions;
+            displayOptions.forEach((displayOption, i) => {
+                const originalOption = originalOptions[i];
+                const buttonWrapper = document.createElement('div');
+                buttonWrapper.className = 'col-6 d-grid';
+                const button = document.createElement('button');
+                button.className = 'btn btn-lg btn-primary';
+                button.textContent = `${i + 1}. ${displayOption}`;
+                button.dataset.answer = originalOption;
+                button.onclick = () => checkAnswer(button, correctAnswer);
+                buttonWrapper.appendChild(button);
+                optionsContainer.appendChild(buttonWrapper);
+            });
+        }
+
+        function setupImageZoomQuiz(question) {
+            const img = document.createElement('img');
+            img.id = 'character-image';
+            img.className = 'img-fluid';
+            img.src = `/static/uploads/${question.image}`;
+            img.onload = () => {
+                const segment = Math.floor(Math.random() * 4);
+                imageContainer.dataset.segment = segment;
+                imageContainer.classList.add('zoomed');
+            };
+            imageContainer.appendChild(img);
+            createButtons(question.options, question.answer);
+        }
+
+        function setupTextObfuscateQuiz(question) {
+            const img = document.createElement('img');
+            img.id = 'character-image';
+            img.className = 'img-fluid';
+            img.src = `/static/uploads/${question.image}`;
+            imageContainer.classList.remove('zoomed');
+            imageContainer.appendChild(img);
+            createButtons(question.options, question.answer, question.obfuscated_options);
+        }
+
+        function setupMemoryGame(question) {
+            imageContainer.style.display = 'none';
+            optionsContainer.className = 'memory-game-container'; // Use specific class for memory game grid
+
+            const memoryCards = [...question.cards, ...question.cards];
+            shuffle(memoryCards);
+
+            let firstCard = null;
+            let secondCard = null;
+            let lockBoard = false;
+            let matchedPairs = 0;
+
+            memoryCards.forEach(cardInfo => {
+                const card = document.createElement('div');
+                card.classList.add('memory-card');
+                card.dataset.name = cardInfo.name;
+
+                // The visible side with the image
+                const backFace = document.createElement('div');
+                backFace.classList.add('memory-card-back');
+                const img = document.createElement('img');
+                img.src = `/static/uploads/${cardInfo.image}`;
+                backFace.appendChild(img);
+
+                // The hidden side with the question mark
+                const frontFace = document.createElement('div');
+                frontFace.classList.add('memory-card-front');
+                frontFace.textContent = '?';
+
+                card.appendChild(frontFace);
+                card.appendChild(backFace);
+                optionsContainer.appendChild(card);
+
+                card.addEventListener('click', () => {
+                    if (lockBoard || card.classList.contains('flip')) return;
+
+                    card.classList.add('flip');
+
+                    if (!firstCard) {
+                        firstCard = card;
+                        return;
+                    }
+
+                    secondCard = card;
+                    lockBoard = true;
+
+                    if (firstCard.dataset.name === secondCard.dataset.name) {
+                        matchedPairs++;
+                        if (matchedPairs === question.cards.length) {
+                            score += 4;
+                            scoreDisplay.textContent = score;
+                            setTimeout(() => { currentQuestionIndex++; loadQuestion(); }, 1000);
+                        } else {
+                            resetTurn();
+                        }
+                    } else {
+                        setTimeout(() => {
+                            firstCard.classList.remove('flip');
+                            secondCard.classList.remove('flip');
+                            resetTurn();
+                            // Incorrect match, move to next question
+                            score -= 4;
+                            scoreDisplay.textContent = score;
+                            alert('틀렸습니다! 다음 문제로 넘어갑니다.');
+                            setTimeout(() => { currentQuestionIndex++; loadQuestion(); }, 500);
+                        }, 1000);
+                    }
+                });
+            });
+
+            function resetTurn() {
+                [firstCard, secondCard] = [null, null];
+                lockBoard = false;
+            }
+        }
+
+        // --- Modal and Initialization ---
+        const userInfoModal = new bootstrap.Modal(document.getElementById('userInfoModal'));
+        const userInfoForm = document.getElementById('userInfoForm');
+        const mainContent = document.getElementById('main-content');
+
+        userInfoForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const school = document.getElementById('schoolInput').value;
+            const nickname = document.getElementById('nicknameInput').value;
+            
+            if (school.trim() && nickname.trim()) {
+                // Save to game-over form as well
+                document.getElementById('player-school').value = school;
+                document.getElementById('player-nickname').value = nickname;
+                
+                userInfoModal.hide();
+                mainContent.style.display = 'block';
+                loadingScreen.style.display = 'block';
+                quizArea.style.display = 'none'; // Hide quiz area until fetch is complete
+                fetchQuestions();
+            } else {
+                alert('소속과 별명을 모두 입력해주세요.');
+            }
+        });
+
+        // Show the modal on page load
+        userInfoModal.show();
+    });
+</script>
+{% endblock %}

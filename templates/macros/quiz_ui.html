@@ -1,0 +1,386 @@
+{% from "macros/stamp_macro.html" import stamp_system %}
+
+{#
+    A flexible macro to render the main quiz UI structure.
+
+    Parameters:
+    - mode_title: The title to display for the quiz mode.
+    - show_timer: Boolean. If true, the timer element is displayed.
+    - caller: The content block for the specific game mechanic (e.g., text input or option buttons).
+#}
+{% macro render_quiz_ui(mode_title, show_timer=True) -%}
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Jua&family=Black+Han+Sans&family=Noto+Sans+KR:wght@300;400;500;700;900&family=Pretendard:wght@300;400;500;600;700&display=swap');
+
+    /* 기본 스타일 */
+    .quiz-container-modern {
+        font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
+        letter-spacing: -0.3px;
+    }
+    
+    /* 헤더 스타일 */
+    .quiz-header {
+        padding: 0.5rem 1rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .quiz-header .quiz-title {
+        font-family: 'Gasoek One', 'Black Han Sans', sans-serif;
+        font-size: 2.6rem;
+        letter-spacing: -0.5px;
+        background: linear-gradient(45deg, #ff6b6b, #f06595);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        text-shadow: 2px 2px 5px rgba(0,0,0,0.15);
+        position: relative;
+        display: inline-block;
+    }
+    
+    .quiz-header .quiz-title::after {
+        content: '';
+        position: absolute;
+        bottom: -5px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 60%;
+        height: 4px;
+        background: linear-gradient(45deg, #ff6b6b, #f06595);
+        border-radius: 2px;
+    }
+    
+    .quiz-header .score-box {
+        font-family: 'Jua', sans-serif;
+        font-size: 1.8rem;
+        color: #5f27cd;
+        min-width: 140px;
+        text-align: center;
+        background: linear-gradient(135deg, rgba(255,255,255,0.6), rgba(255,255,255,0.2));
+        padding: 0.6rem 1.2rem;
+        border-radius: 16px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        backdrop-filter: blur(5px);
+        border: 1px solid rgba(255,255,255,0.2);
+        transition: all 0.3s ease;
+    }
+    
+    .quiz-header .score-box:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    }
+
+    /* 메인 메뉴 버튼 스타일 */
+    .main-menu-button {
+        font-family: 'Jua', sans-serif;
+        font-size: 1.5rem;
+        color: #5f27cd;
+        background: linear-gradient(135deg, rgba(255,255,255,0.6), rgba(255,255,255,0.2));
+        padding: 0.6rem 1.2rem;
+        border-radius: 16px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        backdrop-filter: blur(5px);
+        border: 1px solid rgba(255,255,255,0.2);
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex; /* 아이콘과 텍스트 정렬 */
+        align-items: center;
+    }
+
+    .main-menu-button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        color: #341f97;
+        text-decoration: none;
+    }
+    
+    /* 퀴즈 컨텐츠 박스 */
+    .quiz-content-box {
+        background: linear-gradient(135deg, #ffffff, #f8f9fa);
+        border-radius: 24px;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+        border: 1px solid rgba(0,0,0,0.05);
+        overflow: hidden;
+        transition: all 0.3s ease;
+        padding: 1.5rem;
+    }
+    
+    .quiz-content-box:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+    }
+    
+    /* 캐릭터 이미지 컨테이너 */
+    .image-container {
+        width: 100%;
+        max-width: 45vh; /* 최대 너비를 뷰포트 높이의 45%로 제한 */
+        margin: 1rem auto; /* 중앙 정렬 */
+        aspect-ratio: 1 / 1; /* 항상 1:1 비율 유지 */
+        overflow: hidden; /* 넘치는 부분 숨김 */
+        border-radius: 18px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        position: relative; /* 내부 이미지 위치 기준 */
+    }
+
+    #character-image {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: contain; /* 이미지 전체가 보이도록 조절 */
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        background-color: #ffffff; /* 이미지 배경색 추가 */
+    }
+    
+    #character-image:hover {
+        transform: scale(1.02);
+        box-shadow: 0 15px 35px rgba(0,0,0,0.25);
+    }
+    
+    /* 진행 상태 표시 */
+    .progress-container {
+        width: 90%;
+        margin: 0 auto 1.8rem auto;
+    }
+    
+    #progress-bar {
+        font-family: 'Jua', sans-serif;
+        font-size: 1.1rem;
+        color: white;
+        text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+        background: linear-gradient(90deg, #5f27cd, #341f97);
+        transition: width 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        height: 30px;
+        border-radius: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .progress {
+        height: 30px;
+        border-radius: 50px;
+        background-color: #e9ecef;
+        box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+    /* 버튼 스타일 */
+    #options-container .btn, .input-group .btn, #end-buttons .btn {
+        font-family: 'Pretendard', 'Jua', sans-serif;
+        font-size: 1.15rem;
+        font-weight: 600;
+        padding: 0.85rem 1.8rem;
+        border-radius: 16px;
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+        position: relative;
+        overflow: hidden;
+        border: none;
+        letter-spacing: -0.3px;
+    }
+    
+    #options-container .btn:hover, .input-group .btn:hover, #end-buttons .btn:hover {
+        transform: translateY(-4px) scale(1.02);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+    }
+    
+    #options-container .btn:active, .input-group .btn:active, #end-buttons .btn:active {
+        transform: translateY(1px);
+    }
+    
+    #options-container .btn::before, .input-group .btn::before, #end-buttons .btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.2), rgba(255,255,255,0));
+        transition: left 0.7s ease;
+    }
+    
+    #options-container .btn:hover::before, .input-group .btn:hover::before, #end-buttons .btn:hover::before {
+        left: 100%;
+    }
+    
+    /* 타이머 스타일 */
+    .timer-container {
+        font-family: 'Jua', 'Pretendard', sans-serif;
+        background: linear-gradient(135deg, rgba(255,107,107,0.1), rgba(255,107,107,0.2));
+        padding: 0.7rem 2rem;
+        border-radius: 50px;
+        display: inline-block;
+        box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+        border: 1px solid rgba(255,107,107,0.3);
+        margin-bottom: 1.5rem;
+        transition: all 0.3s ease;
+    }
+    
+    .timer-container:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    }
+    
+    #timer {
+        color: #ff6b6b;
+        font-weight: bold;
+        font-size: 1.5rem;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+    
+    /* 진행 시간 표시 */
+    .total-time-container {
+        font-family: 'Jua', 'Pretendard', sans-serif;
+        background: linear-gradient(135deg, rgba(95,39,205,0.1), rgba(95,39,205,0.2));
+        padding: 0.5rem 1.5rem;
+        border-radius: 50px;
+        display: inline-block;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        border: 1px solid rgba(95,39,205,0.2);
+        margin-top: 0.5rem;
+        transition: all 0.3s ease;
+    }
+    
+    .total-time-container:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 15px rgba(0,0,0,0.12);
+    }
+    
+    #total-timer {
+        color: #5f27cd;
+        font-weight: bold;
+    }
+    
+    /* 애니메이션 효과 */
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(30px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    @keyframes scaleIn {
+        from { opacity: 0; transform: scale(0.9); }
+        to { opacity: 1; transform: scale(1); }
+    }
+    
+    #quiz-area {
+        animation: fadeIn 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    
+    .quiz-content-box {
+        animation: scaleIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+</style>
+
+<div class="container mt-5">
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="text-center">
+        <h2 class="mb-4" style="font-family: 'Pretendard', 'Jua', sans-serif; font-weight: 600;">퀴즈를 불러오는 중<span class="loading-dots">...</span></h2>
+        <div class="spinner-border" role="status" style="width: 3.5rem; height: 3.5rem; color: #5f27cd;">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <div id="loading-error-message" class="alert alert-danger mt-4" style="display: none;"></div>
+        <div class="mt-4" style="max-width: 450px; margin: 0 auto;">
+            <div class="progress" style="height: 12px; border-radius: 10px; background-color: #f0f0f0; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%; background: linear-gradient(90deg, #5f27cd, #ff6b6b);"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Quiz Area -->
+    <div id="quiz-area" class="text-center quiz-container-modern" style="display: none;">
+        
+        <!-- Header: Title and Score -->
+        <div class="d-flex justify-content-between align-items-center mb-4 quiz-header">
+            <a href="{{ url_for('index') }}" class="main-menu-button"><i class="fas fa-arrow-left me-2"></i> 메인메뉴</a>
+            <h1 class="quiz-title mb-0">{{ mode_title }}</h1>
+            <div class="score-box">
+                현재 점수: <span id="score">0</span>
+            </div>
+        </div>
+
+        <!-- Timer and Progress Info Row -->
+        <div class="d-flex justify-content-center align-items-center flex-wrap gap-3 mb-4">
+            <!-- Timer (Optional) -->
+            {% if show_timer %}
+            <div class="timer-container">
+                <p class="fs-4 mb-0">
+                    <i class="fas fa-hourglass-half me-2" style="color: #ff6b6b;"></i> 
+                    남은 시간: <span id="timer">30</span>초
+                </p>
+            </div>
+            {% endif %}
+            
+            <!-- Total Time (Optional) - Will be shown by JavaScript if needed -->
+            <div class="total-time-container" id="total-time-container" style="display: none;">
+                <p class="fs-5 mb-0">
+                    <i class="fas fa-clock me-2" style="color: #5f27cd;"></i>
+                    진행 시간: <span id="total-timer">00:00</span>
+                </p>
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div id="progress-container" class="progress flex-grow-1" style="height: 25px;">
+                <div id="progress-bar" class="progress-bar bg-success fw-bold" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+            <div id="timer-slot" class="flex-shrink-0"></div>
+        </div>
+
+
+        <!-- Box containing image and options -->
+        <div class="quiz-content-box my-4">
+            <!-- Image Container with Stamp -->
+            <div class="image-container">
+                <img id="character-image" src="" alt="캐릭터 이미지">
+                {{ stamp_system() }}
+            </div>
+
+            <!-- This is where mode-specific content (like options or input fields) will be injected -->
+            <div class="mt-4">
+                {{ caller() }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Result Screen -->
+    <div id="result-screen" class="text-center quiz-container-modern" style="display: none;">
+        <h2 class="mb-4" style="font-family: 'Gasoek One', 'Black Han Sans', sans-serif; font-size: 3.2rem; background: linear-gradient(45deg, #5f27cd, #ff6b6b); -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: 2px 2px 5px rgba(0,0,0,0.15);">게임 종료!</h2>
+        
+        <div class="card w-75 mx-auto" style="border-radius: 24px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.15); border: none;">
+            <div class="card-header text-white" style="background: linear-gradient(135deg, #5f27cd, #341f97); padding: 1.2rem; border: none;">
+                <h3 style="font-family: 'Jua', 'Pretendard', sans-serif; margin-bottom: 0; font-size: 1.8rem;">최종 결과</h3>
+            </div>
+            
+            <div class="card-body p-5">
+                <h4 class="card-title mb-4" style="font-family: 'Pretendard', 'Jua', sans-serif; font-weight: 600; color: #333; font-size: 1.5rem;">최종 점수</h4>
+                
+                <p class="card-text display-1 mb-4" id="final-score" style="font-family: 'Black Han Sans', sans-serif; background: linear-gradient(45deg, #5f27cd, #ff6b6b); -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: 2px 2px 5px rgba(0,0,0,0.1);">0</p>
+                
+                <div class="p-4 rounded-4" style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);">
+                    <p class="card-text fs-5 mb-0" style="font-family: 'Pretendard', 'Jua', sans-serif; font-weight: 500;">
+                        총 <span id="total-questions" style="font-weight: 700;">0</span>문제 중 
+                        <span id="correct-answers" style="color: #ff6b6b; font-weight: 700; font-size: 1.3rem;">0</span>개를 맞혔습니다.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div id="end-buttons" class="mt-5 d-flex justify-content-center flex-wrap gap-3">
+            <!-- Buttons are added here by JS -->
+        </div>
+    </div>
+</div>
+
+<style>
+    @keyframes blink {
+        0%, 100% { opacity: 1; }
+        33% { opacity: 0.3; }
+    }
+    
+    .loading-dots {
+        display: inline-block;
+        animation: blink 1.4s infinite both;
+    }
+</style>
+{%- endmacro %}

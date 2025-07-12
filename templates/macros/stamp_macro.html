@@ -1,0 +1,94 @@
+{% macro stamp_system() %}
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Jua&display=swap');
+    
+    .stamp {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0.5);
+        opacity: 0;
+        padding: 20px 40px;
+        border-radius: 15px;
+        font-family: 'Jua', 'Pretendard', sans-serif;
+        font-size: 3.2rem;
+        font-weight: 400;
+        letter-spacing: 1px;
+        color: white;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
+        z-index: 100;
+        pointer-events: none;
+        transition: all 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(5px);
+    }
+
+    .stamp.show {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1) rotate(-5deg);
+    }
+
+    .stamp.correct {
+        background: linear-gradient(135deg, #2ecc71, #27ae60);
+        border: 4px solid rgba(255, 255, 255, 0.8);
+    }
+
+    .stamp.incorrect {
+        background: linear-gradient(135deg, #e74c3c, #c0392b);
+        border: 4px solid rgba(255, 255, 255, 0.8);
+    }
+    
+    /* 스탬프 애니메이션 효과 */
+    @keyframes stampPulse {
+        0% { transform: translate(-50%, -50%) scale(1) rotate(-5deg); }
+        50% { transform: translate(-50%, -50%) scale(1.05) rotate(-3deg); }
+        100% { transform: translate(-50%, -50%) scale(1) rotate(-5deg); }
+    }
+    
+    .stamp.show {
+        animation: stampPulse 0.5s ease-in-out 1;
+    }
+    
+    /* 다크모드 대응 */
+    .dark-mode .stamp.correct {
+        box-shadow: 0 0 30px rgba(46, 204, 113, 0.5);
+    }
+    
+    .dark-mode .stamp.incorrect {
+        box-shadow: 0 0 30px rgba(231, 76, 60, 0.5);
+    }
+</style>
+
+<div id="stamp-feedback" class="stamp"></div>
+
+<script>
+    function showUnifiedStamp(text, isCorrect) {
+        const stamp = document.getElementById('stamp-feedback');
+        if (!stamp) {
+            console.error('Stamp feedback element not found!');
+            return;
+        }
+
+        // 이모지 추가
+        const emoji = isCorrect ? '✓ ' : '✗ ';
+        stamp.textContent = emoji + text;
+        stamp.className = 'stamp show';
+
+        if (isCorrect) {
+            stamp.classList.add('correct');
+        } else {
+            stamp.classList.add('incorrect');
+        }
+
+        // 사운드 효과 (선택적)
+        const audio = new Audio();
+        audio.src = isCorrect ? '/static/sounds/correct.mp3' : '/static/sounds/incorrect.mp3';
+        audio.volume = 0.5;
+        audio.play().catch(e => console.log('사운드 재생 실패:', e));
+
+        setTimeout(() => {
+            stamp.className = 'stamp';
+        }, 1000);
+    }
+</script>
+{% endmacro %}

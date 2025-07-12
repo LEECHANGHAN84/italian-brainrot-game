@@ -1,0 +1,120 @@
+{% extends "layout.html" %}
+{% block title %}관리자 페이지{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="text-center my-4">
+        <h1>캐릭터 관리</h1>
+        <a href="/" class="btn btn-secondary mt-2">메인으로 돌아가기</a>
+    </div>
+
+    <!-- Today's Stats -->
+    <div class="card mb-4 bg-light">
+        <div class="card-header">
+            <h3 class="mb-0">오늘의 통계 📈</h3>
+        </div>
+        <div class="card-body">
+            <div class="row text-center">
+                <div class="col-md-6">
+                    <div class="stat-box p-3 border rounded">
+                        <h4>오늘 접속자 수</h4>
+                        <p class="display-4 fw-bold">{{ today_visitors }}</p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="stat-box p-3 border rounded">
+                        <h4>오늘 게임 판 수</h4>
+                        <p class="display-4 fw-bold">{{ today_games }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-5">
+        <div class="card-header">
+            <h3>새 캐릭터 추가</h3>
+        </div>
+        <div class="card-body">
+            <form method="POST" enctype="multipart/form-data">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="name_ko" class="form-label">한글 이름</label>
+                        <input type="text" class="form-control" id="name_ko" name="name_ko" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="name_en" class="form-label">영어 이름 (선택 사항)</label>
+                        <input type="text" class="form-control" id="name_en" name="name_en">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="image" class="form-label">캐릭터 사진 (webp, jpg, png)</label>
+                    <input type="file" class="form-control" id="image" name="image" accept=".png,.jpg,.jpeg,.webp" required onchange="previewImage(event)">
+                </div>
+                <div class="mb-3 text-center">
+                    <img id="thumbnail-preview" src="#" alt="이미지 미리보기" class="img-fluid rounded" style="max-height: 200px; display: none;">
+                </div>
+                <hr>
+                <h5>추가 퀴즈 (5개)</h5>
+                {% for i in range(1, 6) %}
+                <div class="mb-3">
+                    <label for="question{{i}}" class="form-label">퀴즈 {{i}}</label>
+                    <input type="text" class="form-control" id="question{{i}}" name="question{{i}}">
+                </div>
+                {% endfor %}
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary btn-lg">캐릭터 저장</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <h2>저장된 캐릭터 목록</h2>
+    <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">순번</th>
+                    <th scope="col">사진</th>
+                    <th scope="col">한글 이름</th>
+                    <th scope="col">영어 이름</th>
+                    <th scope="col">관리</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for character in characters %}
+                <tr>
+                    <th scope="row">{{ character.id }}</th>
+                    <td>
+                        <img src="{{ url_for('static', filename='uploads/' + character.image_file) }}" class="img-thumbnail" style="width: 75px; height: 75px; object-fit: cover;">
+                    </td>
+                    <td>{{ character.name_ko }}</td>
+                    <td>{{ character.name_en }}</td>
+                    <td>
+                        <a href="{{ url_for('edit_character', id=character.id) }}" class="btn btn-sm btn-warning">수정</a>
+                        <a href="{{ url_for('delete_character', id=character.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('정말로 이 캐릭터를 삭제하시겠습니까?')">삭제</a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="text-center">저장된 캐릭터가 없습니다.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function previewImage(event) {
+    const reader = new FileReader();
+    reader.onload = function(){
+        const preview = document.getElementById('thumbnail-preview');
+        preview.src = reader.result;
+        preview.style.display = 'block';
+    }
+    reader.readAsDataURL(event.target.files[0]);
+}
+</script>
+{% endblock %}

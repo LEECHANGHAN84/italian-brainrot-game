@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}신 모드 명예의 전당{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="text-center mb-5">
+        <h1 class="display-4">🏆 신 모드 명예의 전당 🏆</h1>
+        <p class="lead">최고의 이탈리아 뇌지컬 장인들을 소개합니다!</p>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover table-striped table-bordered text-center align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th scope="col">순위</th>
+                    <th scope="col">소속</th>
+                    <th scope="col">별명</th>
+                    <th scope="col">점수</th>
+                    <th scope="col">등록일</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for score in scores %}
+                <tr>
+                    <th scope="row">
+                        {% if loop.index == 1 %}
+                            🥇
+                        {% elif loop.index == 2 %}
+                            🥈
+                        {% elif loop.index == 3 %}
+                            🥉
+                        {% else %}
+                            {{ loop.index }}
+                        {% endif %}
+                    </th>
+                    <td>{{ score.school }}</td>
+                    <td>{{ score.nickname }}</td>
+                    <td><strong>{{ score.score }}</strong></td>
+                    <td>{{ score.timestamp.strftime('%Y-%m-%d') }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5">아직 등록된 점수가 없습니다. 첫 번째 주인공이 되어보세요!</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="text-center mt-4">
+        <a href="/god_mode" class="btn btn-primary btn-lg">신 모드 다시 도전</a>
+        <a href="/" class="btn btn-secondary btn-lg">메인으로 돌아가기</a>
+    </div>
+</div>
+{% endblock %}

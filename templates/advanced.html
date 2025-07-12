@@ -1,0 +1,271 @@
+{% extends "layout.html" %}
+{% from "macros/quiz_ui.html" import render_quiz_ui %}
+{% from "macros/stamp_macro.html" import stamp_system %}
+
+{% block title %}고수 모드{% endblock %}
+
+{% block content %}
+<style>
+    /* 타이머 스타일 */
+    .timer-container {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        justify-content: center;
+        margin-bottom: 1rem;
+    }
+    #timer-bar-container {
+        width: 200px;
+        height: 15px;
+        background-color: #e9ecef;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    #timer-bar {
+        height: 100%;
+        width: 100%;
+        background-color: #17a2b8; /* info color */
+        transition: width 1s linear;
+    }
+</style>
+    {% call render_quiz_ui('고수 모드', show_timer=False) %}
+        <div id="options-container" class="row g-3 col-10 mx-auto">
+            <!-- Buttons will be inserted here by JavaScript -->
+        </div>
+    {% endcall %}
+{% endblock %}
+
+{% block scripts %}
+{{ stamp_system() }}
+<script>
+    // --- DOM Elements ---
+    const scoreDisplay = document.getElementById('score');
+    const quizArea = document.getElementById('quiz-area');
+    const loadingScreen = document.getElementById('loading-screen');
+    const resultScreen = document.getElementById('result-screen');
+    const finalScoreDisplay = document.getElementById('final-score');
+    const correctAnswersDisplay = document.getElementById('correct-answers');
+    const totalQuestionsDisplay = document.getElementById('total-questions');
+    const optionsContainer = document.getElementById('options-container');
+    const characterImage = document.getElementById('character-image');
+    const progressBar = document.getElementById('progress-bar');
+    const timerSlot = document.getElementById('timer-slot');
+    let timerBar, timerSeconds; // Will be created dynamically
+
+    // --- Game State ---
+    let score = 0;
+    let questions = [];
+    let currentQuestionIndex = 0;
+    let correctAnswers = 0;
+    let timerInterval = null; // Timer interval ID
+
+    // --- Core Functions ---
+    function createTimerUI() {
+        if (document.getElementById('timer-container')) return;
+
+        const timerContainer = document.createElement('div');
+        timerContainer.id = 'timer-container';
+        timerContainer.className = 'timer-container d-flex align-items-center';
+        timerContainer.innerHTML = `
+            <i class="fas fa-stopwatch me-2 text-danger"></i>
+            <div id="timer-bar-container" class="progress" style="width: 100px; height: 15px;">
+                <div id="timer-bar" class="progress-bar bg-danger" role="progressbar" style="width: 100%;"></div>
+            </div>
+            <span id="timer-seconds" class="fw-bold ms-2" style="min-width: 20px;">5</span>
+        `;
+        timerSlot.appendChild(timerContainer);
+
+        timerBar = document.getElementById('timer-bar');
+        timerSeconds = document.getElementById('timer-seconds');
+    }
+
+    async function startQuiz() {
+        clearInterval(timerInterval);
+        createTimerUI();
+        loadingScreen.style.display = 'block';
+        quizArea.style.display = 'none';
+        resultScreen.style.display = 'none';
+        try {
+            const response = await fetch('/api/quiz/advanced');
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || '퀴즈 데이터를 불러오는 데 실패했습니다.');
+            }
+            questions = await response.json();
+            if (questions.length === 0) {
+                throw new Error('표시할 퀴즈가 없습니다.');
+            }
+            // Reset state for a new game
+            currentQuestionIndex = 0;
+            score = 0;
+            correctAnswers = 0;
+            scoreDisplay.textContent = score;
+            
+            loadingScreen.style.display = 'none';
+            quizArea.style.display = 'block';
+            showNextQuestion();
+        } catch (error) {
+            loadingScreen.innerHTML = `<p class="text-danger">${error.message}</p><a href="{{ url_for('index') }}" class="btn btn-primary">메인으로</a>`;
+        }
+    }
+
+    function showNextQuestion() {
+        clearInterval(timerInterval); // Clear previous timer
+
+        if (currentQuestionIndex >= questions.length) {
+            endQuiz();
+            return;
+        }
+        const question = questions[currentQuestionIndex];
+        characterImage.src = `/static/uploads/${question.image}`;
+        optionsContainer.innerHTML = ''; // Clear previous options
+
+        question.options.forEach((optionText, index) => {
+            const buttonWrapper = document.createElement('div');
+            buttonWrapper.className = 'col-6 d-grid';
+
+            const button = document.createElement('button');
+            button.className = 'btn btn-lg btn-primary';
+            button.textContent = `${index + 1}. ${optionText}`;
+            button.dataset.answer = optionText; // 정답 비교를 위해 데이터 속성 추가
+            button.onclick = () => checkAnswer(button, question.answer);
+
+            buttonWrapper.appendChild(button);
+            optionsContainer.appendChild(buttonWrapper);
+        });
+        
+        updateProgressBar();
+        startTimer();
+    }
+
+    function startTimer() {
+        let timeLeft = 5;
+        const totalTime = 5;
+        
+        timerBar.style.transition = 'none'; // Reset transition for instant change
+        timerBar.style.width = '100%';
+        timerBar.classList.remove('bg-warning');
+        timerBar.classList.add('bg-danger');
+        timerSeconds.textContent = timeLeft;
+
+        // Force reflow to apply the reset style immediately
+        void timerBar.offsetWidth;
+
+        // Re-enable transition for the countdown animation
+        timerBar.style.transition = 'width 1s linear';
+
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            timerSeconds.textContent = timeLeft;
+            timerBar.style.width = `${(timeLeft / totalTime) * 100}%`;
+
+            if (timeLeft <= 2) {
+                timerBar.classList.remove('bg-danger');
+                timerBar.classList.add('bg-warning');
+            }
+
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                handleTimeout();
+            }
+        }, 1000);
+    }
+
+    function handleTimeout() {
+        // Instantly set timer bar to 0 width
+        timerBar.style.transition = 'none';
+        timerBar.style.width = '0%';
+
+        score -= 5;
+        scoreDisplay.textContent = score;
+        showUnifiedStamp('시간초과 -5', false);
+
+        const allButtons = optionsContainer.querySelectorAll('button');
+        const correctAnswer = questions[currentQuestionIndex].answer;
+
+        allButtons.forEach(btn => {
+            btn.disabled = true;
+            if (btn.dataset.answer === correctAnswer) {
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-success');
+            }
+        });
+
+        currentQuestionIndex++;
+        setTimeout(showNextQuestion, 2000);
+    }
+
+    function checkAnswer(selectedButton, correctAnswer) {
+        clearInterval(timerInterval); // Stop the timer
+
+        const allButtons = optionsContainer.querySelectorAll('button');
+        const selectedAnswerName = selectedButton.dataset.answer;
+
+        allButtons.forEach(btn => {
+            btn.disabled = true;
+            const btnName = btn.dataset.answer;
+            if (btnName === correctAnswer) {
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-success');
+            }
+        });
+
+        if (selectedAnswerName === correctAnswer) {
+            score += 5;
+            correctAnswers++;
+            scoreDisplay.textContent = score;
+            showUnifiedStamp('정답 +5', true);
+        } else {
+            selectedButton.classList.remove('btn-primary');
+            selectedButton.classList.add('btn-danger');
+            score -= 5;
+            scoreDisplay.textContent = score;
+            showUnifiedStamp('오답 -5', false);
+        }
+        
+        currentQuestionIndex++;
+        setTimeout(showNextQuestion, 1200);
+    }
+
+    function updateProgressBar() {
+        const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+        progressBar.style.width = `${progress}%`;
+        progressBar.textContent = `${currentQuestionIndex + 1} / ${questions.length}`;
+    }
+
+    function endQuiz() {
+        clearInterval(timerInterval); // Stop timer when quiz ends
+        quizArea.style.display = 'none';
+        resultScreen.style.display = 'block';
+        finalScoreDisplay.textContent = score;
+        correctAnswersDisplay.textContent = correctAnswers;
+        totalQuestionsDisplay.textContent = questions.length;
+        
+        const endButtons = document.getElementById('end-buttons');
+        endButtons.innerHTML = '';
+
+        if (score >= 80) {
+            const nextModeBtn = document.createElement('a');
+            nextModeBtn.href = "{{ url_for('super_god_mode') }}";
+            nextModeBtn.className = 'btn btn-success btn-lg me-3';
+            nextModeBtn.innerHTML = '<i class="fas fa-arrow-right me-2"></i> 초고수 모드 도전';
+            endButtons.appendChild(nextModeBtn);
+        }
+
+        const restartBtn = document.createElement('a');
+        restartBtn.href = "{{ url_for('advanced_mode') }}";
+        restartBtn.className = 'btn btn-primary btn-lg me-3';
+        restartBtn.innerHTML = '<i class="fas fa-redo me-2"></i> 다시하기';
+        endButtons.appendChild(restartBtn);
+
+        const mainMenuBtn = document.createElement('a');
+        mainMenuBtn.href = "{{ url_for('index') }}";
+        mainMenuBtn.className = 'btn btn-secondary btn-lg';
+        mainMenuBtn.innerHTML = '<i class="fas fa-home me-2"></i> 메인 메뉴로';
+        endButtons.appendChild(mainMenuBtn);
+    }
+
+    // --- Event Listener ---
+    document.addEventListener('DOMContentLoaded', startQuiz);
+</script>
+{% endblock %}

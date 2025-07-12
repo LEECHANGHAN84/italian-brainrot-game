@@ -1,0 +1,344 @@
+{% extends "layout.html" %}
+{% from "macros/quiz_ui.html" import render_quiz_ui %}
+{% from "macros/stamp_macro.html" import stamp_system %}
+
+{% block title %}신 모드{% endblock %}
+
+{% block content %}
+<style>
+    /* --- General Styles --- */
+    .quiz-content-area {
+        min-height: 350px; /* Ensure consistent height */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* --- Image Zoom Styles --- */
+    .image-container.zoomed #character-image {
+        transform: scale(2);
+    }
+    .image-container.zoomed[data-segment="0"] #character-image { transform-origin: top left; }
+    .image-container.zoomed[data-segment="1"] #character-image { transform-origin: top right; }
+    .image-container.zoomed[data-segment="2"] #character-image { transform-origin: bottom left; }
+    .image-container.zoomed[data-segment="3"] #character-image { transform-origin: bottom right; }
+
+    /* --- Memory Game Styles --- */
+    .memory-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        width: 300px;
+        margin: auto;
+    }
+    .memory-card {
+        width: 140px;
+        height: 140px;
+        perspective: 1000px;
+        cursor: pointer;
+    }
+    .memory-card-inner {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        transition: transform 0.6s;
+        transform-style: preserve-3d;
+    }
+    .memory-card.is-flipped .memory-card-inner {
+        transform: rotateY(180deg);
+    }
+    .memory-card-face {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        -webkit-backface-visibility: hidden;
+        backface-visibility: hidden;
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+    .memory-card-front {
+        background-color: #007bff;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+    }
+    .memory-card-back img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .memory-card-back {
+        transform: rotateY(180deg);
+    }
+</style>
+
+{% call render_quiz_ui('신 모드', show_timer=True) %}
+    <div id="quiz-content-area" class="quiz-content-area">
+        <!-- Content for different quiz types will be injected here -->
+    </div>
+    <div id="options-container" class="row g-3 col-10 mx-auto mt-4">
+        <!-- Options for standard quizzes will be injected here -->
+    </div>
+{% endcall %}
+{% endblock %}
+
+{% block scripts %}
+{{ stamp_system() }}
+<script>
+    // --- DOM Elements ---
+    const scoreDisplay = document.getElementById('score');
+    const quizArea = document.getElementById('quiz-area');
+    const loadingScreen = document.getElementById('loading-screen');
+    const resultScreen = document.getElementById('result-screen');
+    const finalScoreDisplay = document.getElementById('final-score');
+    const timeTakenDisplay = document.getElementById('time-taken'); // For result screen
+    const correctAnswersDisplay = document.getElementById('correct-answers');
+    const totalQuestionsDisplay = document.getElementById('total-questions');
+    const optionsContainer = document.getElementById('options-container');
+    const quizContentArea = document.getElementById('quiz-content-area');
+    const progressBar = document.getElementById('progress-bar');
+    const timerDisplay = document.getElementById('timer'); // The timer element from quiz_ui
+
+    // --- Game State ---
+    let score = 0;
+    let questions = [];
+    let currentQuestionIndex = 0;
+    let correctAnswers = 0;
+    let gameTimerInterval = null;
+    let startTime = 0;
+
+    // --- Memory Game State ---
+    let flippedCards = [];
+    let matchedPairs = 0;
+    let canFlip = true;
+
+    // --- Core Game Flow ---
+    async function startQuiz() {
+        loadingScreen.style.display = 'block';
+        quizArea.style.display = 'none';
+        resultScreen.style.display = 'none';
+
+        try {
+            const response = await fetch('/api/quiz/god');
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || '퀴즈 데이터를 불러오는 데 실패했습니다.');
+            }
+            questions = await response.json();
+            if (questions.length === 0) throw new Error('표시할 퀴즈가 없습니다.');
+
+            // Reset state
+            currentQuestionIndex = 0;
+            score = 0;
+            correctAnswers = 0;
+            scoreDisplay.textContent = score;
+
+            loadingScreen.style.display = 'none';
+            quizArea.style.display = 'block';
+            
+            startGameTimer();
+            showNextQuestion();
+        } catch (error) {
+            loadingScreen.innerHTML = `<p class="text-danger">${error.message}</p><a href="{{ url_for('index') }}" class="btn btn-primary">메인으로</a>`;
+        }
+    }
+
+    function showNextQuestion() {
+        if (currentQuestionIndex >= questions.length) {
+            endQuiz();
+            return;
+        }
+
+        const question = questions[currentQuestionIndex];
+        quizContentArea.innerHTML = '';
+        optionsContainer.innerHTML = '';
+
+        // Route to the correct function based on question type
+        if (question.type === 'image_zoom' || question.type === 'text_obfuscate') {
+            setupStandardQuiz(question);
+        } else if (question.type === 'memory_game') {
+            setupMemoryGame(question);
+        }
+        updateProgressBar();
+    }
+
+    function endQuiz() {
+        clearInterval(gameTimerInterval);
+        const timeTaken = ((Date.now() - startTime) / 1000).toFixed(2);
+
+        quizArea.style.display = 'none';
+        resultScreen.style.display = 'block';
+        finalScoreDisplay.textContent = score;
+        timeTakenDisplay.textContent = `${timeTaken}초`;
+        correctAnswersDisplay.textContent = correctAnswers;
+        totalQuestionsDisplay.textContent = questions.length;
+
+        // TODO: Add logic to save score to leaderboard
+    }
+
+    // --- Timer Functions ---
+    function startGameTimer() {
+        startTime = Date.now();
+        timerDisplay.textContent = '0.0';
+        gameTimerInterval = setInterval(() => {
+            const elapsedSeconds = ((Date.now() - startTime) / 1000).toFixed(1);
+            timerDisplay.textContent = elapsedSeconds;
+        }, 100);
+    }
+
+    // --- Standard Quiz (Image Zoom & Text Obfuscate) ---
+    function setupStandardQuiz(question) {
+        // Create and set up the image
+        const imageContainer = document.createElement('div');
+        imageContainer.className = 'image-container text-center';
+        const characterImage = document.createElement('img');
+        characterImage.id = 'character-image';
+        characterImage.className = 'img-fluid rounded shadow-sm';
+        characterImage.style.maxHeight = '300px';
+        characterImage.src = `/static/uploads/${question.image}`;
+        imageContainer.appendChild(characterImage);
+        quizContentArea.appendChild(imageContainer);
+
+        // Apply zoom if it's an image_zoom question
+        if (question.type === 'image_zoom') {
+            characterImage.onload = () => {
+                const segment = Math.floor(Math.random() * 4);
+                imageContainer.dataset.segment = segment;
+                imageContainer.classList.add('zoomed');
+            };
+        }
+
+        // Create options buttons
+        const options = question.options;
+        options.forEach((optionText, index) => {
+            const button = document.createElement('button');
+            button.className = 'btn btn-lg btn-primary col-6';
+            button.textContent = `${index + 1}. ${optionText}`;
+            button.onclick = () => checkStandardAnswer(button, question.options[index], question.answer, question.type);
+            optionsContainer.appendChild(button);
+        });
+    }
+
+    function checkStandardAnswer(selectedButton, originalOption, correctAnswer, type) {
+        // Disable all buttons
+        Array.from(optionsContainer.children).forEach(btn => btn.disabled = true);
+
+        // Reveal full image if zoomed
+        if (type === 'image_zoom') {
+            const imageContainer = quizContentArea.querySelector('.image-container');
+            if(imageContainer) imageContainer.classList.remove('zoomed');
+        }
+
+        // Show correct answer
+        Array.from(optionsContainer.children).forEach((btn, index) => {
+            if (questions[currentQuestionIndex].options[index] === correctAnswer) {
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-success');
+            }
+        });
+
+        if (originalOption === correctAnswer) {
+            score += 4;
+            correctAnswers++;
+            showUnifiedStamp('정답 +4', true);
+        } else {
+            score -= 10;
+            selectedButton.classList.remove('btn-primary');
+            selectedButton.classList.add('btn-danger');
+            showUnifiedStamp('오답 -10', false);
+        }
+        scoreDisplay.textContent = score;
+
+        currentQuestionIndex++;
+        setTimeout(showNextQuestion, 1500);
+    }
+
+    // --- Memory Game --- //
+    function setupMemoryGame(question) {
+        quizContentArea.innerHTML = '<div class="memory-grid"></div>';
+        const grid = quizContentArea.querySelector('.memory-grid');
+        const cards = [...question.cards, ...question.cards]; // Duplicate for pairs
+        random.shuffle(cards);
+
+        cards.forEach(imageFile => {
+            const cardElement = document.createElement('div');
+            cardElement.className = 'memory-card';
+            cardElement.dataset.image = imageFile;
+            cardElement.innerHTML = `
+                <div class="memory-card-inner">
+                    <div class="memory-card-face memory-card-front">?</div>
+                    <div class="memory-card-face memory-card-back">
+                        <img src="/static/uploads/${imageFile}" alt="card">
+                    </div>
+                </div>
+            `;
+            cardElement.addEventListener('click', () => flipCard(cardElement));
+            grid.appendChild(cardElement);
+        });
+        matchedPairs = 0;
+    }
+
+    function flipCard(card) {
+        if (!canFlip || card.classList.contains('is-flipped') || flippedCards.length >= 2) return;
+
+        card.classList.add('is-flipped');
+        flippedCards.push(card);
+
+        if (flippedCards.length === 2) {
+            canFlip = false;
+            setTimeout(checkForMatch, 700);
+        }
+    }
+
+    function checkForMatch() {
+        const [card1, card2] = flippedCards;
+        if (card1.dataset.image === card2.dataset.image) {
+            matchedPairs++;
+            flippedCards = [];
+            canFlip = true;
+            if (matchedPairs === (document.querySelectorAll('.memory-card').length / 2)) {
+                handleMemoryGameWin();
+            }
+        } else {
+            setTimeout(() => {
+                card1.classList.remove('is-flipped');
+                card2.classList.remove('is-flipped');
+                flippedCards = [];
+                canFlip = true;
+            }, 1000);
+        }
+    }
+    
+    function handleMemoryGameWin() {
+        score += 4;
+        correctAnswers++;
+        scoreDisplay.textContent = score;
+        showUnifiedStamp('성공! +4', true);
+        currentQuestionIndex++;
+        setTimeout(showNextQuestion, 1500);
+    }
+
+    // --- Utility Functions ---
+    function updateProgressBar() {
+        const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+        progressBar.style.width = `${progress}%`;
+        progressBar.textContent = `${currentQuestionIndex + 1} / ${questions.length}`;
+    }
+
+    // Simple shuffle utility
+    const random = {
+        shuffle: (arr) => {
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+    };
+
+    // --- Event Listener ---
+    document.addEventListener('DOMContentLoaded', startQuiz);
+</script>
+{% endblock %}
