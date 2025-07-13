@@ -86,7 +86,7 @@
         quizArea.style.display = 'none';
         resultScreen.style.display = 'none';
         try {
-            const response = await fetch('/api/quiz/super_god'); // API 경로 수정
+            const response = await fetch('/api/quiz/god'); // 올바른 API 경로
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.error || '퀴즈 데이터를 불러오는 데 실패했습니다.');
@@ -242,7 +242,7 @@
         endButtons.innerHTML = '';
 
         const restartBtn = document.createElement('a');
-        restartBtn.href = "{{ url_for('super_god_mode') }}"; // 다시하기 링크 수정
+        restartBtn.href = "{{ url_for('god_mode') }}"; // 다시하기 링크 수정
         restartBtn.className = 'btn btn-primary btn-lg me-3';
         restartBtn.innerHTML = '<i class="fas fa-redo me-2"></i> 다시하기';
         endButtons.appendChild(restartBtn);
