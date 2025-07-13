@@ -246,7 +246,7 @@
 
         if (score >= 80) {
             const nextModeBtn = document.createElement('a');
-            nextModeBtn.href = "{{ url_for('super_god_mode') }}";
+            nextModeBtn.href = "{{ url_for('god_mode') }}";
             nextModeBtn.className = 'btn btn-success btn-lg me-3';
             nextModeBtn.innerHTML = '<i class="fas fa-arrow-right me-2"></i> 초고수 모드 도전';
             endButtons.appendChild(nextModeBtn);
