@@ -389,51 +389,50 @@ def api_quiz_god():
         
         # God mode requires at least 4 characters to generate options.
         if len(all_characters) < 4:
-            return jsonify({'error': '퀴즈를 만들려면 최소 4명의 캐릭터가 필요합니다.'}), 400
+            return jsonify({'error': '퀴즈를 만들려면 최소 4명의 캠릭터가 필요합니다.'}), 400
 
-        # Take up to 25 characters for the quiz.
-        num_questions = 25
-        num_memory_quizzes = 3
+        # 총 20문제: 이미지 1/4 문제 10문제, 텍스트 마스킹 문제 10문제
+        num_image_crop_questions = 10
+        num_masked_text_questions = 10
+        num_memory_quizzes = 0  # 메모리 게임 제외
         
         questions = []
         
         character_pool = list(all_characters)
         random.shuffle(character_pool)
 
-        # 1. Generate memory quizzes first to ensure they are included
-        num_memory_to_generate = min(num_memory_quizzes, len(character_pool) // 2)
-        for _ in range(num_memory_to_generate):
-            # Pop two characters for the pair
-            if len(character_pool) < 2: break
-            pair_chars = [character_pool.pop(), character_pool.pop()]
-            
-            cards = []
-            for char in pair_chars:
-                cards.extend([
-                    {'id': char.id, 'name': char.name_ko, 'image': char.image_file},
-                    {'id': char.id, 'name': char.name_ko, 'image': char.image_file}
-                ])
-            
-            random.shuffle(cards)
-            
-            questions.append({
-                'type': 'memory',
-                'cards': cards
-            })
+        # 1. 메모리 게임 문제 생성 (현재는 사용하지 않음)
+        if num_memory_quizzes > 0:
+            num_memory_to_generate = min(num_memory_quizzes, len(character_pool) // 2)
+            for _ in range(num_memory_to_generate):
+                # Pop two characters for the pair
+                if len(character_pool) < 2: break
+                pair_chars = [character_pool.pop(), character_pool.pop()]
+                
+                cards = []
+                for char in pair_chars:
+                    cards.extend([
+                        {'id': char.id, 'name': char.name_ko, 'image': char.image_file},
+                        {'id': char.id, 'name': char.name_ko, 'image': char.image_file}
+                    ])
+                
+                random.shuffle(cards)
+                
+                questions.append({
+                    'type': 'memory',
+                    'cards': cards
+                })
         
-        # 2. Generate standard quizzes with the remaining characters
-        num_standard_quizzes = num_questions - len(questions)
-        standard_chars_pool = list(all_characters) # Use all characters for options
+        # 2. 이미지 1/4 문제 생성 (10문제)
+        standard_chars_pool = list(all_characters)  # Use all characters for options
         
-        for _ in range(num_standard_quizzes):
+        for _ in range(num_image_crop_questions):
             # If we run out of unique characters for questions, reuse from the full list
             if not character_pool:
                 character_pool = list(all_characters)
                 random.shuffle(character_pool)
 
             char_to_guess = character_pool.pop()
-            
-            quiz_type = random.choice(['image_crop'])
             
             options = [char_to_guess.name_ko]
             wrong_answer_pool = [c.name_ko for c in standard_chars_pool if c.id != char_to_guess.id]
@@ -442,7 +441,31 @@ def api_quiz_god():
 
             question_data = {
                 'type': 'standard',
-                'quiz_type': quiz_type,
+                'quiz_type': 'image_crop',
+                'image': char_to_guess.image_file,
+                'options': options,
+                'answer': char_to_guess.name_ko
+            }
+
+            questions.append(question_data)
+            
+        # 3. 텍스트 마스킹 문제 생성 (10문제)
+        for _ in range(num_masked_text_questions):
+            # If we run out of unique characters for questions, reuse from the full list
+            if not character_pool:
+                character_pool = list(all_characters)
+                random.shuffle(character_pool)
+
+            char_to_guess = character_pool.pop()
+            
+            options = [char_to_guess.name_ko]
+            wrong_answer_pool = [c.name_ko for c in standard_chars_pool if c.id != char_to_guess.id]
+            options.extend(random.sample(wrong_answer_pool, 3))
+            random.shuffle(options)
+
+            question_data = {
+                'type': 'standard',
+                'quiz_type': 'masked_text',
                 'image': char_to_guess.image_file,
                 'options': options,
                 'answer': char_to_guess.name_ko

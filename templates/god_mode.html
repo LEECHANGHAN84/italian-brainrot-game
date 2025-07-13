@@ -2,7 +2,7 @@
 {% from "macros/quiz_ui.html" import render_quiz_ui %}
 {% from "macros/stamp_macro.html" import stamp_system %}
 
-{% block title %}초고수 모드{% endblock %}
+{% block title %}신 모드{% endblock %}
 
 {% block content %}
 <style>
@@ -27,8 +27,61 @@
         background-color: #17a2b8; /* info color */
         transition: width 1s linear;
     }
+    /* 경과 시간 스타일 */
+    #elapsed-timer {
+        font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
+        font-weight: 600;
+        font-size: 1.1rem;
+        background: linear-gradient(45deg, #5f27cd, #ff6b6b);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        text-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    /* 이미지 클립 스타일 */
+    .character-image-wrapper {
+        position: relative;
+        width: 100%;
+        max-width: 300px;
+        margin: 0 auto;
+    }
+    
+    /* 이미지 컨테이너 스타일 */
+    .image-container {
+        position: relative;
+        width: 100%;
+        max-width: 300px;
+        height: 300px;
+        margin: 0 auto;
+        overflow: hidden;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-radius: 18px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    }
+    
+    .image-container img,
+    #character-image {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        transition: transform 0.3s ease;
+        border-radius: 15px;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.1) !important;
+    }
+    
+    /* 이미지 줌 효과를 위한 CSS */
+    .image-container.zoomed #character-image {
+        transform: scale(2);
+    }
+    .image-container.zoomed[data-segment="0"] #character-image { transform-origin: top left; }
+    .image-container.zoomed[data-segment="1"] #character-image { transform-origin: top right; }
+    .image-container.zoomed[data-segment="2"] #character-image { transform-origin: bottom left; }
+    .image-container.zoomed[data-segment="3"] #character-image { transform-origin: bottom right; }
 </style>
-    {% call render_quiz_ui('초고수 모드', show_timer=False) %}
+    {% call render_quiz_ui('신 모드', show_timer=False) %}
         <div id="options-container" class="row g-3 col-10 mx-auto">
             <!-- Buttons will be inserted here by JavaScript -->
         </div>
@@ -47,17 +100,16 @@
     const correctAnswersDisplay = document.getElementById('correct-answers');
     const totalQuestionsDisplay = document.getElementById('total-questions');
     const optionsContainer = document.getElementById('options-container');
-    const characterImage = document.getElementById('character-image');
+    const imageContainer = document.querySelector('.image-container');
     const progressBar = document.getElementById('progress-bar');
     const timerSlot = document.getElementById('timer-slot');
-    let timerBar, timerSeconds; // Will be created dynamically
-
     // --- Game State ---
     let score = 0;
     let questions = [];
     let currentQuestionIndex = 0;
     let correctAnswers = 0;
     let timerInterval = null; // Timer interval ID
+    let startTime = null; // 퀴즈 시작 시간
 
     // --- Core Functions ---
     function createTimerUI() {
@@ -67,16 +119,10 @@
         timerContainer.id = 'timer-container';
         timerContainer.className = 'timer-container d-flex align-items-center';
         timerContainer.innerHTML = `
-            <i class="fas fa-stopwatch me-2 text-danger"></i>
-            <div id="timer-bar-container" class="progress" style="width: 100px; height: 15px;">
-                <div id="timer-bar" class="progress-bar bg-danger" role="progressbar" style="width: 100%;"></div>
-            </div>
-            <span id="timer-seconds" class="fw-bold ms-2" style="min-width: 20px;">5</span>
+            <i class="fas fa-stopwatch me-2" style="color: #5f27cd;"></i>
+            <span id="elapsed-timer" class="fw-bold">00:00</span>
         `;
         timerSlot.appendChild(timerContainer);
-
-        timerBar = document.getElementById('timer-bar');
-        timerSeconds = document.getElementById('timer-seconds');
     }
 
     async function startQuiz() {
@@ -101,6 +147,11 @@
             correctAnswers = 0;
             scoreDisplay.textContent = score;
             
+            // 퀴즈 시작 시간 기록
+            startTime = new Date();
+            // 경과 시간 타이머 시작
+            startElapsedTimer();
+            
             loadingScreen.style.display = 'none';
             quizArea.style.display = 'block';
             showNextQuestion();
@@ -110,14 +161,74 @@
     }
 
     function showNextQuestion() {
-        clearInterval(timerInterval); // Clear previous timer
-
         if (currentQuestionIndex >= questions.length) {
             endQuiz();
             return;
         }
         const question = questions[currentQuestionIndex];
-        characterImage.src = `/static/uploads/${question.image}`;
+        console.log('현재 문제 유형:', question.type, question);
+        
+        // 이미지 영역 초기화
+        imageContainer.innerHTML = '<img id="character-image" src="" alt="캡릭터 이미지">';
+        const characterImage = document.getElementById('character-image');
+        
+        // 문제 유형에 따라 이미지 표시 방식 변경
+        if (question.type === 'partial_image') {
+            console.log('이미지 1/4 보이는 문제 표시:', question.visible_part);
+            characterImage.src = `/static/uploads/${question.image}`;
+            
+            // 이미지가 로드된 후 준 클래스 적용
+            characterImage.onload = () => {
+                const imageContainer = characterImage.closest('.image-container');
+                // 4개의 사분면 (0: TL, 1: TR, 2: BL, 3: BR)
+                const segment = Math.floor(Math.random() * 4);
+                imageContainer.dataset.segment = segment;
+                imageContainer.classList.add('zoomed');
+                question.applied_segment = segment; // 적용된 세그먼트 저장
+            };
+            
+            // 문제 유형 표시 삭제 - 사용자 요청에 따라 표시하지 않음
+        } else if (question.type === 'memory') {
+            // 메모리 게임 유형 처리
+            console.log('메모리 게임 문제 표시');
+            // 메모리 게임 UI는 별도로 구현 필요
+            // 임시로 메시지 표시
+            imageContainer.innerHTML = '<div class="alert alert-info">메모리 게임 문제 (준비 중)</div>';
+            
+        } else if (question.type === 'standard') {
+            // 일반 문제일 경우 기본 이미지 표시
+            console.log('일반 문제 표시:', question.quiz_type);
+            
+            characterImage.src = `/static/uploads/${question.image}`;
+            characterImage.className = 'img-fluid rounded';
+            
+            // 이미지 크롭 유형인 경우 클립핑 적용
+            if (question.quiz_type === 'image_crop') {
+                console.log('이미지 클립 문제 표시');
+                
+                // 이미지가 로드된 후 준 클래스 적용
+                characterImage.onload = () => {
+                    const imageContainer = characterImage.closest('.image-container');
+                    // 4개의 사분면 (0: TL, 1: TR, 2: BL, 3: BR)
+                    const segment = Math.floor(Math.random() * 4);
+                    imageContainer.dataset.segment = segment;
+                    imageContainer.classList.add('zoomed');
+                    question.applied_segment = segment; // 적용된 세그먼트 저장
+                };
+                
+                // 문제 유형 표시 삭제 - 사용자 요청에 따라 표시하지 않음
+            } else if (question.quiz_type === 'masked_text') {
+                console.log('텍스트 마스킹 문제 표시');
+                // 일반 이미지는 그대로 표시
+                characterImage.className = 'img-fluid rounded';
+            }
+        } else {
+            // 알 수 없는 문제 유형일 경우 기본 이미지 표시
+            console.log('알 수 없는 문제 유형:', question.type);
+            characterImage.src = `/static/uploads/${question.image}`;
+            characterImage.className = 'img-fluid rounded';
+        }
+        
         optionsContainer.innerHTML = ''; // Clear previous options
 
         question.options.forEach((optionText, index) => {
@@ -126,7 +237,16 @@
 
             const button = document.createElement('button');
             button.className = 'btn btn-lg btn-primary';
-            button.textContent = `${index + 1}. ${optionText}`;
+            
+            // masked_text 퀴즈 유형일 경우 텍스트 마스킹 적용
+            let displayText = optionText;
+            if (question.type === 'standard' && question.quiz_type === 'masked_text') {
+                displayText = maskText(optionText);
+                // 마스킹된 텍스트를 버튼에 저장
+                button.dataset.maskedText = displayText;
+            }
+            
+            button.textContent = `${index + 1}. ${displayText}`;
             button.dataset.answer = optionText; // 정답 비교를 위해 데이터 속성 추가
             button.onclick = () => checkAnswer(button, question.answer);
 
@@ -135,44 +255,94 @@
         });
         
         updateProgressBar();
-        startTimer();
+        startElapsedTimer();
+    }
+    
+    // 이전 클립 관련 함수들은 새로운 준 방식으로 대체되어 삭제함
+    
+    // 한글 텍스트를 마스킹하는 함수
+    function maskText(text) {
+        // 글자가 너무 짧으면 그대로 반환
+        if (text.replace(/\s+/g, '').length < 4) {
+            return text;
+        }
+        
+        // 랜덤하게 4글자 선택할 위치 찾기
+        // 띄어쓰기를 제외한 실제 글자만 고려
+        const charPositions = [];
+        for (let i = 0; i < text.length; i++) {
+            if (text[i] !== ' ') {
+                charPositions.push(i);
+            }
+        }
+        
+        // 전체 글자 수가 4글자 미만이면 그대로 반환
+        if (charPositions.length < 4) {
+            return text;
+        }
+        
+        // 랜덤하게 4글자 선택
+        const selectedIndices = [];
+        while (selectedIndices.length < 4) {
+            const randomIndex = Math.floor(Math.random() * charPositions.length);
+            const charPos = charPositions[randomIndex];
+            
+            // 이미 선택된 위치가 아니면 추가
+            if (!selectedIndices.includes(charPos)) {
+                selectedIndices.push(charPos);
+            }
+        }
+        
+        // 정렬하여 순서대로 처리
+        selectedIndices.sort((a, b) => a - b);
+        
+        // 결과 문자열 생성
+        let result = '';
+        for (let i = 0; i < text.length; i++) {
+            if (text[i] === ' ') {
+                // 띄어쓰기는 그대로 유지
+                result += ' ';
+            } else if (selectedIndices.includes(i)) {
+                // 선택된 4글자는 그대로 표시
+                result += text[i];
+            } else {
+                // 나머지 글자는 'O'로 대체
+                result += 'O';
+            }
+        }
+        
+        return result;
     }
 
-    function startTimer() {
-        let timeLeft = 5;
-        const totalTime = 5;
+    function startElapsedTimer() {
+        const elapsedTimer = document.getElementById('elapsed-timer');
+        if (!elapsedTimer) return;
         
-        timerBar.style.transition = 'none'; // Reset transition for instant change
-        timerBar.style.width = '100%';
-        timerBar.classList.remove('bg-warning');
-        timerBar.classList.add('bg-danger');
-        timerSeconds.textContent = timeLeft;
-
-        void timerBar.offsetWidth;
-
-        timerBar.style.transition = 'width 1s linear';
-
-        timerInterval = setInterval(() => {
-            timeLeft--;
-            timerSeconds.textContent = timeLeft;
-            timerBar.style.width = `${(timeLeft / totalTime) * 100}%`;
-
-            if (timeLeft <= 2) {
-                timerBar.classList.remove('bg-danger');
-                timerBar.classList.add('bg-warning');
-            }
-
-            if (timeLeft <= 0) {
-                clearInterval(timerInterval);
-                handleTimeout();
-            }
-        }, 1000);
+        // 기존 타이머 정리
+        clearInterval(timerInterval);
+        
+        // 경과 시간 표시 함수
+        function updateElapsedTime() {
+            if (!startTime) return;
+            
+            const now = new Date();
+            const elapsedMs = now - startTime;
+            const totalSeconds = Math.floor(elapsedMs / 1000); // 총 초 계산
+            const milliseconds = Math.floor((elapsedMs % 1000) / 10); // 밀리초를 2자리로 표시
+            
+            elapsedTimer.textContent = `${totalSeconds}.${milliseconds.toString().padStart(2, '0')}`;
+        }
+        
+        // 초기 시간 표시
+        updateElapsedTime();
+        
+        // 10밀리초마다 경과 시간 업데이트 (100ms)
+        timerInterval = setInterval(updateElapsedTime, 100);
     }
 
     function handleTimeout() {
         timerBar.style.transition = 'none';
         timerBar.style.width = '0%';
-
         score -= 10;
         scoreDisplay.textContent = score;
         showUnifiedStamp('시간초과 -10', false);
@@ -197,6 +367,32 @@
 
         const allButtons = optionsContainer.querySelectorAll('button');
         const selectedAnswerName = selectedButton.dataset.answer;
+        const question = questions[currentQuestionIndex];
+
+        // 이미지가 부분적으로 보이는 문제였다면 전체 이미지 표시
+        if (question.type === 'partial_image' || (question.type === 'standard' && question.quiz_type === 'image_crop')) {
+            const characterImage = document.getElementById('character-image');
+            const imageContainer = characterImage.closest('.image-container');
+            
+            // 준 클래스 제거
+            imageContainer.classList.remove('zoomed');
+            delete imageContainer.dataset.segment;
+            
+            // 문제 유형 표시 제거
+            const typeIndicator = imageContainer.querySelector('.text-center');
+            if (typeIndicator) {
+                typeIndicator.remove(); // 표시 요소 제거
+            }
+        }
+        
+        // 텍스트 마스킹 문제였다면 원래 텍스트 보이기
+        if (question.type === 'standard' && question.quiz_type === 'masked_text') {
+            // 모든 버튼의 텍스트를 원래 텍스트로 복원
+            allButtons.forEach((btn, idx) => {
+                const originalText = btn.dataset.answer;
+                btn.textContent = `${idx + 1}. ${originalText}`;
+            });
+        }
 
         allButtons.forEach(btn => {
             btn.disabled = true;
@@ -208,20 +404,23 @@
         });
 
         if (selectedAnswerName === correctAnswer) {
-            score += 10;
+            score += 4; // 점수 변경: 10점 -> 4점
             correctAnswers++;
             scoreDisplay.textContent = score;
-            showUnifiedStamp('정답 +10', true);
+            showUnifiedStamp('정답 +4', true);
         } else {
             selectedButton.classList.remove('btn-primary');
             selectedButton.classList.add('btn-danger');
-            score -= 10;
+            score -= 4; // 점수 변경: 10점 -> 4점
             scoreDisplay.textContent = score;
-            showUnifiedStamp('오답 -10', false);
+            showUnifiedStamp('오답 -4', false);
         }
         
-        currentQuestionIndex++;
-        setTimeout(showNextQuestion, 1200);
+        // 잠시 대기 후 다음 문제로 이동
+        setTimeout(() => {
+            currentQuestionIndex++;
+            showNextQuestion();
+        }, 1500);
     }
 
     function updateProgressBar() {
