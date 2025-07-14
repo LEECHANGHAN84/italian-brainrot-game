@@ -309,7 +309,7 @@
                 button.className = 'btn btn-lg btn-primary';
                 button.textContent = `${index + 1}. ${option.name}`;
                 button.dataset.answer = option.name; // 정답 비교를 위해 데이터 속성 추가
-                button.onclick = () => checkAnswer(button, question.options[0].name); // 첫 번째 옵션이 정답
+                button.onclick = () => checkAnswer(button, question.correct_answer); // 명시적으로 전달받은 정답 사용
 
                 buttonWrapper.appendChild(button);
                 optionsContainer.appendChild(buttonWrapper);
@@ -340,7 +340,7 @@
                 
                 button.textContent = `${index + 1}. ${displayText}`;
                 button.dataset.answer = option.name; // 정답 비교를 위해 데이터 속성 추가
-                button.onclick = () => checkAnswer(button, question.options[0].name); // 첫 번째 옵션이 정답
+                button.onclick = () => checkAnswer(button, question.correct_answer); // 명시적으로 전달받은 정답 사용
 
                 buttonWrapper.appendChild(button);
                 optionsContainer.appendChild(buttonWrapper);
@@ -424,8 +424,8 @@
                                     // 메모리 게임 완료 - 정답 처리
                                     setTimeout(() => {
                                         const dummyButton = document.createElement('button');
-                                        // 정답은 아무 캐릭터 이름이나 사용 가능
-                                        const correctAnswer = question.cards[0].name;
+                                        // 백엔드에서 명시적으로 전달받은 정답 사용
+                                        const correctAnswer = question.correct_answer;
                                         dummyButton.dataset.answer = correctAnswer;
                                         checkAnswer(dummyButton, correctAnswer);
                                     }, 500);

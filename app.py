@@ -420,6 +420,7 @@ def god_quiz():
             'type': 'image_crop',  # 이미지 크롭 타입
             'character_id': correct_character.id,
             'image': correct_character.image_file,
+            'correct_answer': correct_character.name_ko,  # 정답 캐릭터 이름 명시적 전달
             'options': options
         }
         
@@ -457,6 +458,7 @@ def god_quiz():
             'type': 'masked_text',  # 마스킹된 텍스트 타입
             'character_id': correct_character.id,
             'image': correct_character.image_file,
+            'correct_answer': correct_character.name_ko,  # 정답 캐릭터 이름 명시적 전달
             'options': options
         }
         
@@ -504,6 +506,7 @@ def god_quiz():
             'id': len(questions) + 1,
             'type': 'memory_game',  # 메모리 게임 타입
             'character_id': correct_character.id,
+            'correct_answer': character1.name_ko,  # 첫 번째 캐릭터를 정답으로 명시적 전달
             'cards': cards
         }
         

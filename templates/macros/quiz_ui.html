@@ -328,12 +328,14 @@
         </div>
 
 
+        <!-- Stamp System - 이미지 컨테이너 밖에서 렌더링 -->
+        {{ stamp_system() }}
+        
         <!-- Box containing image and options -->
         <div class="quiz-content-box my-4">
-            <!-- Image Container with Stamp -->
+            <!-- Image Container -->
             <div class="image-container">
                 <img id="character-image" src="" alt="캐릭터 이미지">
-                {{ stamp_system() }}
             </div>
 
             <!-- This is where mode-specific content (like options or input fields) will be injected -->
