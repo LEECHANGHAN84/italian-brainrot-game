@@ -365,6 +365,19 @@ class GodLeaderboard(db.Model):
     def __repr__(self):
         return f"GodLeaderboard('{self.country}', '{self.school}', '{self.nickname}', {self.score}, {self.time_taken})"
 
+# Ultra God Leaderboard Model
+class UltraGodLeaderboard(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    country = db.Column(db.String(100), nullable=False, default='South Korea')
+    school = db.Column(db.String(100), nullable=False)
+    nickname = db.Column(db.String(100), nullable=False)
+    score = db.Column(db.Integer, nullable=False)
+    time_taken = db.Column(db.Float, nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"UltraGodLeaderboard('{self.country}', '{self.school}', '{self.nickname}', {self.score}, {self.time_taken})"
+
 
 @app.route('/divine_power')
 def divine_power_page():
@@ -372,13 +385,18 @@ def divine_power_page():
     return "This is a test. If you see this, the route is working."
 
 
-
-
 @app.route('/god_mode')
 def god_mode():
     db.session.add(GameLog(mode='god'))
     db.session.commit()
     return render_template('god_mode.html')
+
+
+@app.route('/ultra_god_mode')
+def ultra_god_mode():
+    db.session.add(GameLog(mode='ultra_god'))
+    db.session.commit()
+    return render_template('ultra_god_mode.html')
 
 
 @app.route('/api/quiz/god')
@@ -393,7 +411,161 @@ def god_quiz():
     available_characters_for_quiz = all_characters.copy()
     random.shuffle(available_characters_for_quiz)
     
+@app.route('/api/quiz/ultra_god')
+def ultra_god_quiz():
+    # 모든 캐릭터 가져오기
+    all_characters = Character.query.all()
+    
+    if len(all_characters) < 4:
+        return jsonify({'error': '퀴즈를 만들려면 최소 4명의 캐릭터가 필요합니다.'}), 404
+    
+    # 총 25개의 문제 생성 (10개는 이미지 크롭, 10개는 마스킹된 텍스트, 5개는 메모리 게임)
+    questions = []
+    
+    # 중복 방지를 위해 캐릭터 리스트 복사 (4지선다 문제용)
+    available_characters_for_quiz = all_characters.copy()
+    random.shuffle(available_characters_for_quiz)
+    
     # 이미지 크롭 문제 10개 생성
+    for _ in range(10):
+        if not available_characters_for_quiz:  # 사용 가능한 캐릭터가 없으면 다시 채우기
+            available_characters_for_quiz = all_characters.copy()
+            random.shuffle(available_characters_for_quiz)
+        
+        # 정답이 될 캐릭터 선택 (중복 없이)
+        correct_character = available_characters_for_quiz.pop()
+        
+        # 오답이 될 캐릭터 3개 랜덤 선택 (정답 제외)
+        other_characters = [c for c in all_characters if c.id != correct_character.id]
+        wrong_characters = random.sample(other_characters, 3)
+        
+        # 모든 선택지 (정답 1개 + 오답 3개)
+        options = [{
+            'id': correct_character.id,
+            'name': correct_character.name_ko,
+            'image': correct_character.image_file
+        }]
+        
+        for wrong in wrong_characters:
+            options.append({
+                'id': wrong.id,
+                'name': wrong.name_ko,
+                'image': wrong.image_file
+            })
+        
+        # 선택지 섭기
+        random.shuffle(options)
+        
+        # 문제 생성
+        question = {
+            'id': len(questions) + 1,
+            'type': 'image_crop',  # 이미지 크롭 타입
+            'character_id': correct_character.id,
+            'image': correct_character.image_file,
+            'correct_answer': correct_character.name_ko,  # 정답 캐릭터 이름 명시적 전달
+            'options': options
+        }
+        
+        questions.append(question)
+    
+    # 마스킹된 텍스트 문제 10개 생성
+    for _ in range(10):
+        if not available_characters_for_quiz:  # 사용 가능한 캐릭터가 없으면 다시 채우기
+            available_characters_for_quiz = all_characters.copy()
+            random.shuffle(available_characters_for_quiz)
+        
+        # 정답이 될 캐릭터 선택 (중복 없이)
+        correct_character = available_characters_for_quiz.pop()
+        
+        # 오답이 될 캐릭터 3개 랜덤 선택 (정답 제외)
+        other_characters = [c for c in all_characters if c.id != correct_character.id]
+        wrong_characters = random.sample(other_characters, 3)
+        
+        # 모든 선택지 (정답 1개 + 오답 3개)
+        options = [{
+            'id': correct_character.id,
+            'name': correct_character.name_ko,
+            'image': correct_character.image_file
+        }]
+        
+        for wrong in wrong_characters:
+            options.append({
+                'id': wrong.id,
+                'name': wrong.name_ko,
+                'image': wrong.image_file
+            })
+        
+        # 선택지 섭기
+        random.shuffle(options)
+        
+        # 문제 생성
+        question = {
+            'id': len(questions) + 1,
+            'type': 'masked_text',  # 마스킹된 텍스트 타입
+            'character_id': correct_character.id,
+            'image': correct_character.image_file,
+            'correct_answer': correct_character.name_ko,  # 정답 캐릭터 이름 명시적 전달
+            'options': options
+        }
+        
+        questions.append(question)
+    
+    # 메모리 게임 문제 5개 생성
+    for _ in range(5):
+        # 서로 다른 캐릭터 2개 랜덤 선택
+        selected_characters = random.sample(all_characters, 2)
+        character1 = selected_characters[0]
+        character2 = selected_characters[1]
+        
+        # 메모리 게임은 2개의 서로 다른 캐릭터 이미지를 각각 2장씩 사용
+        cards = [{
+            'id': f"{character1.id}_1",
+            'character_id': character1.id,
+            'name': character1.name_ko,
+            'image': character1.image_file,
+            'pair_id': 1  # 페어 식별자 추가
+        }, {
+            'id': f"{character1.id}_2",
+            'character_id': character1.id,
+            'name': character1.name_ko,
+            'image': character1.image_file,
+            'pair_id': 1  # 같은 페어 식별자
+        }, {
+            'id': f"{character2.id}_1",
+            'character_id': character2.id,
+            'name': character2.name_ko,
+            'image': character2.image_file,
+            'pair_id': 2  # 다른 페어 식별자
+        }, {
+            'id': f"{character2.id}_2",
+            'character_id': character2.id,
+            'name': character2.name_ko,
+            'image': character2.image_file,
+            'pair_id': 2  # 같은 페어 식별자
+        }]
+        
+        # 카드 섭기
+        random.shuffle(cards)
+        
+        # 문제 생성
+        question = {
+            'id': len(questions) + 1,
+            'type': 'memory_game',  # 메모리 게임 타입
+            'character_id': character1.id,
+            'correct_answer': character1.name_ko,  # 첫 번째 캐릭터를 정답으로 명시적 전달
+            'cards': cards
+        }
+        
+        questions.append(question)
+    
+    # 문제 섭기
+    random.shuffle(questions)
+    
+    # 문제 ID 재할당
+    for i, q in enumerate(questions):
+        q['id'] = i + 1
+    
+    return jsonify(questions)
     for _ in range(10):
         if not available_characters_for_quiz:  # 사용 가능한 캐릭터가 없으면 다시 채우기
             available_characters_for_quiz = all_characters.copy()
@@ -560,6 +732,11 @@ def god_leaderboard():
     leaderboard_entries = GodLeaderboard.query.order_by(GodLeaderboard.score.desc(), GodLeaderboard.time_taken).limit(100).all()
     return render_template('god_leaderboard.html', scores=leaderboard_entries)
 
+@app.route('/ultra_god_leaderboard')
+def ultra_god_leaderboard():
+    leaderboard_entries = UltraGodLeaderboard.query.order_by(UltraGodLeaderboard.score.desc(), UltraGodLeaderboard.time_taken).limit(100).all()
+    return render_template('god_leaderboard.html', scores=leaderboard_entries, mode='ultra_god')
+
 
 @app.route('/api/god_leaderboard/add', methods=['POST'])
 def add_god_score():
@@ -584,7 +761,28 @@ def add_god_score():
     
     return jsonify({'success': True, 'message': '점수가 성공적으로 추가되었습니다.'}), 201
 
-
+@app.route('/api/ultra_god_leaderboard/add', methods=['POST'])
+def add_ultra_god_score():
+    data = request.get_json()
+    
+    if not data or 'school' not in data or 'nickname' not in data or 'score' not in data or 'time_taken' not in data:
+        return jsonify({'error': '필수 필드가 누락되었습니다.'}), 400
+    
+    # country 필드가 없으면 기본값 'South Korea' 사용
+    country = data.get('country', 'South Korea')
+    
+    new_score = UltraGodLeaderboard(
+        country=country,
+        school=data['school'],
+        nickname=data['nickname'],
+        score=data['score'],
+        time_taken=data['time_taken']
+    )
+    
+    db.session.add(new_score)
+    db.session.commit()
+    
+    return jsonify({'success': True, 'message': '점수가 성공적으로 추가되었습니다.'}), 201
 
 
 # This block ensures that the database tables are created when the app starts.

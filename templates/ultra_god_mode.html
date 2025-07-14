@@ -1,0 +1,824 @@
+{% extends "layout.html" %}
+{% from "macros/quiz_ui.html" import render_quiz_ui %}
+{% from "macros/stamp_macro.html" import stamp_system %}
+
+{% block title %}초신 모드{% endblock %}
+
+{% block content %}
+<style>
+    /* 타이머 스타일 */
+    .timer-container {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        justify-content: center;
+        margin-bottom: 1rem;
+    }
+    #timer-bar-container {
+        width: 200px;
+        height: 15px;
+        background-color: #e9ecef;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    #timer-bar {
+        height: 100%;
+        width: 100%;
+        background-color: #17a2b8; /* info color */
+        transition: width 1s linear;
+    }
+    /* 경과 시간 스타일 */
+    #elapsed-timer {
+        font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
+        font-weight: 600;
+        font-size: 1.1rem;
+        background: linear-gradient(45deg, #5f27cd, #ff6b6b);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        text-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    /* 이미지 클립 스타일 */
+    .character-image-wrapper {
+        position: relative;
+        width: 100%;
+        max-width: 300px;
+        margin: 0 auto;
+    }
+    
+    /* 이미지 컨테이너 스타일 */
+    
+    /* 메모리 게임 스타일 */
+    .memory-game-container {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        grid-gap: 15px;
+        margin: 0 auto 20px;
+        max-width: 500px;
+        position: relative;
+    }
+    
+    /* 매치 성공 효과 */
+    .match-success-effect {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: rgba(76, 175, 80, 0.8);
+        color: white;
+        font-size: 2rem;
+        font-weight: bold;
+        padding: 10px 20px;
+        border-radius: 10px;
+        z-index: 100;
+        animation: fadeInOut 0.8s ease-in-out;
+    }
+    
+    @keyframes fadeInOut {
+        0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+        50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+        100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+    }
+    
+    .memory-card {
+        position: relative;
+        height: 200px;
+        perspective: 1000px;
+        cursor: pointer;
+        transform-style: preserve-3d;
+        transition: transform 0.6s, box-shadow 0.3s;
+        border-radius: 10px;
+        box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+    }
+    
+    .memory-card:hover {
+        box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+        transform: translateY(-5px);
+    }
+    
+    .memory-card.flipped {
+        transform: rotateY(180deg);
+    }
+    
+    .memory-card.matched {
+        transform: rotateY(180deg);
+        cursor: default;
+        box-shadow: 0 0 20px rgba(76, 175, 80, 0.8);
+        border: 3px solid #4CAF50;
+        animation: pulse 1.5s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(76, 175, 80, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+    }
+    
+    .memory-card-front,
+    .memory-card-back {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        backface-visibility: hidden;
+        border-radius: 10px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    .memory-card-front {
+        background-color: white;
+        transform: rotateY(180deg);
+        overflow: hidden;
+        padding: 8px;
+    }
+    
+    .memory-card-back {
+        background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+        color: white;
+        font-weight: bold;
+    }
+    
+    .memory-card-back i {
+        font-size: 3.5rem;
+        color: white;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    .memory-card-front img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        border-radius: 8px;
+    }
+    .image-container {
+        position: relative;
+        width: 100%;
+        max-width: 300px;
+        height: 300px;
+        margin: 0 auto;
+        overflow: hidden;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-radius: 18px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    }
+    
+    .image-container img,
+    #character-image {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        transition: transform 0.3s ease;
+        border-radius: 15px;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.1) !important;
+    }
+    
+    /* 이미지 줌 효과를 위한 CSS */
+    .image-container.zoomed #character-image {
+        transform: scale(2);
+    }
+    .image-container.zoomed[data-segment="0"] #character-image { transform-origin: top left; }
+    .image-container.zoomed[data-segment="1"] #character-image { transform-origin: top right; }
+    .image-container.zoomed[data-segment="2"] #character-image { transform-origin: bottom left; }
+    .image-container.zoomed[data-segment="3"] #character-image { transform-origin: bottom right; }
+</style>
+    <!-- 사용자 정보 입력 폼 -->
+<div id="user-info-form" class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-primary text-white text-center py-3">
+                    <h3 class="mb-0"><i class="fas fa-crown me-2"></i> 초신 모드 도전</h3>
+                </div>
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <p class="lead">도전자 정보를 입력해주세요</p>
+                    </div>
+                    <form id="player-form" class="needs-validation" novalidate>
+                        <div class="mb-3">
+                            <label for="country-select" class="form-label">국가 <i class="fas fa-flag"></i></label>
+                            <select id="country-select" class="form-select" required>
+                                <option value="South Korea" selected data-flag="kr">대한민국 🇰🇷</option>
+                                <option value="Japan" data-flag="jp">일본 🇯🇵</option>
+                                <option value="China" data-flag="cn">중국 🇨🇳</option>
+                                <option value="United States" data-flag="us">미국 🇺🇸</option>
+                                <option value="United Kingdom" data-flag="gb">영국 🇬🇧</option>
+                                <option value="France" data-flag="fr">프랑스 🇫🇷</option>
+                                <option value="Germany" data-flag="de">독일 🇩🇪</option>
+                                <option value="Italy" data-flag="it">이탈리아 🇮🇹</option>
+                                <option value="Spain" data-flag="es">스페인 🇪🇸</option>
+                                <option value="Canada" data-flag="ca">캐나다 🇨🇦</option>
+                                <option value="Australia" data-flag="au">호주 🇦🇺</option>
+                                <option value="Brazil" data-flag="br">브라질 🇧🇷</option>
+                                <option value="Russia" data-flag="ru">러시아 🇷🇺</option>
+                                <option value="India" data-flag="in">인도 🇮🇳</option>
+                            </select>
+                            <div class="invalid-feedback">국가를 선택해주세요.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="affiliation-input" class="form-label">소속 <i class="fas fa-university"></i></label>
+                            <input type="text" id="affiliation-input" class="form-control" placeholder="학교/회사/단체명" required>
+                            <div class="invalid-feedback">소속을 입력해주세요.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="nickname-input" class="form-label">닉네임 <i class="fas fa-user-tag"></i></label>
+                            <input type="text" id="nickname-input" class="form-control" placeholder="사용할 닉네임" required>
+                            <div class="invalid-feedback">닉네임을 입력해주세요.</div>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" id="start-quiz-btn" class="btn btn-primary btn-lg">
+                                <i class="fas fa-play-circle me-2"></i> 도전 시작
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 퀴즈 UI -->
+<div id="quiz-container" style="display: none;">
+    {% call render_quiz_ui('초신 모드', show_timer=False) %}
+        <div id="options-container" class="row g-3 col-10 mx-auto">
+            <!-- Buttons will be inserted here by JavaScript -->
+        </div>
+    {% endcall %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ stamp_system() }}
+<script>
+    // --- DOM Elements ---
+    const userInfoForm = document.getElementById('user-info-form');
+    const quizContainer = document.getElementById('quiz-container');
+    const playerForm = document.getElementById('player-form');
+    const countrySelect = document.getElementById('country-select');
+    const affiliationInput = document.getElementById('affiliation-input');
+    const nicknameInput = document.getElementById('nickname-input');
+    const startQuizBtn = document.getElementById('start-quiz-btn');
+    
+    const scoreDisplay = document.getElementById('score');
+    const quizArea = document.getElementById('quiz-area');
+    const loadingScreen = document.getElementById('loading-screen');
+    const resultScreen = document.getElementById('result-screen');
+    const finalScoreDisplay = document.getElementById('final-score');
+    const correctAnswersDisplay = document.getElementById('correct-answers');
+    const totalQuestionsDisplay = document.getElementById('total-questions');
+    const optionsContainer = document.getElementById('options-container');
+    const imageContainer = document.querySelector('.image-container');
+    const progressBar = document.getElementById('progress-bar');
+    const timerSlot = document.getElementById('timer-slot');
+    
+    // --- Game State ---
+    let score = 0;
+    let questions = [];
+    let currentQuestionIndex = 0;
+    let correctAnswers = 0;
+    let timerInterval = null; // Timer interval ID
+    let startTime = null; // 퀴즈 시작 시간
+    
+    // --- 사용자 정보 ---
+    let playerCountry = 'South Korea';
+    let playerAffiliation = '';
+    let playerNickname = '';
+
+    // --- Core Functions ---
+    function createTimerUI() {
+        if (document.getElementById('timer-container')) return;
+
+        const timerContainer = document.createElement('div');
+        timerContainer.id = 'timer-container';
+        timerContainer.className = 'timer-container d-flex align-items-center';
+        timerContainer.innerHTML = `
+            <i class="fas fa-stopwatch me-2" style="color: #5f27cd;"></i>
+            <span id="elapsed-timer" class="fw-bold">00:00</span>
+        `;
+        timerSlot.appendChild(timerContainer);
+    }
+
+    // 폼 제출 이벤트 핸들러 등록
+    document.addEventListener('DOMContentLoaded', function() {
+        playerForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // 폼 유효성 검사
+            if (!playerForm.checkValidity()) {
+                e.stopPropagation();
+                playerForm.classList.add('was-validated');
+                return;
+            }
+            
+            // 사용자 정보 저장
+            playerCountry = countrySelect.value;
+            playerAffiliation = affiliationInput.value.trim();
+            playerNickname = nicknameInput.value.trim();
+            
+            // 폼 숨기고 퀴즈 시작
+            userInfoForm.style.display = 'none';
+            quizContainer.style.display = 'block';
+            startQuiz();
+        });
+    });
+    
+    async function startQuiz() {
+        clearInterval(timerInterval);
+        createTimerUI();
+        loadingScreen.style.display = 'block';
+        quizArea.style.display = 'none';
+        resultScreen.style.display = 'none';
+        try {
+            const response = await fetch('/api/quiz/ultra_god'); // 초신 모드 API 경로
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || '퀴즈 데이터를 불러오는 데 실패했습니다.');
+            }
+            questions = await response.json();
+            if (questions.length === 0) {
+                throw new Error('표시할 퀴즈가 없습니다.');
+            }
+            // Reset state for a new game
+            currentQuestionIndex = 0;
+            score = 0;
+            correctAnswers = 0;
+            scoreDisplay.textContent = score;
+            
+            // 퀴즈 시작 시간 기록
+            startTime = new Date();
+            // 경과 시간 타이머 시작
+            startElapsedTimer();
+            
+            loadingScreen.style.display = 'none';
+            quizArea.style.display = 'block';
+            showNextQuestion();
+        } catch (error) {
+            loadingScreen.innerHTML = `<p class="text-danger">${error.message}</p><a href="{{ url_for('index') }}" class="btn btn-primary">메인으로</a>`;
+        }
+    }
+
+    function showNextQuestion() {
+        if (currentQuestionIndex >= questions.length) {
+            endQuiz();
+            return;
+        }
+        const question = questions[currentQuestionIndex];
+        console.log('현재 문제 유형:', question.type, question);
+        
+        // 이미지 영역 초기화
+        imageContainer.innerHTML = '';
+        optionsContainer.innerHTML = ''; // Clear previous options
+        
+        // 이미지 컨테이너 표시 (기본값)
+        document.querySelector('.image-container').style.display = 'flex';
+        
+        // 문제 유형에 따라 이미지 표시 방식 변경
+        if (question.type === 'image_crop') {
+            console.log('이미지 크롭 문제 표시');
+            
+            // 이미지 요소 생성
+            const characterImage = document.createElement('img');
+            characterImage.id = 'character-image';
+            characterImage.alt = '캐릭터 이미지';
+            characterImage.src = `/static/uploads/${question.image}`;
+            imageContainer.appendChild(characterImage);
+            
+            // 이미지가 로드된 후 준 클래스 적용
+            characterImage.onload = () => {
+                const imageContainer = characterImage.closest('.image-container');
+                // 4개의 사분면 (0: TL, 1: TR, 2: BL, 3: BR)
+                const segment = Math.floor(Math.random() * 4);
+                imageContainer.dataset.segment = segment;
+                imageContainer.classList.add('zoomed');
+                question.applied_segment = segment; // 적용된 세그먼트 저장
+            };
+            
+            // 선택지 버튼 생성
+            question.options.forEach((option, index) => {
+                const buttonWrapper = document.createElement('div');
+                buttonWrapper.className = 'col-6 d-grid';
+
+                const button = document.createElement('button');
+                button.className = 'btn btn-lg btn-primary';
+                button.textContent = `${index + 1}. ${option.name}`;
+                button.dataset.answer = option.name; // 정답 비교를 위해 데이터 속성 추가
+                button.onclick = () => checkAnswer(button, question.correct_answer); // 명시적으로 전달받은 정답 사용
+
+                buttonWrapper.appendChild(button);
+                optionsContainer.appendChild(buttonWrapper);
+            });
+            
+        } else if (question.type === 'masked_text') {
+            console.log('텍스트 마스킹 문제 표시');
+            
+            // 이미지 요소 생성
+            const characterImage = document.createElement('img');
+            characterImage.id = 'character-image';
+            characterImage.alt = '캐릭터 이미지';
+            characterImage.src = `/static/uploads/${question.image}`;
+            characterImage.className = 'img-fluid rounded';
+            imageContainer.appendChild(characterImage);
+            
+            // 선택지 버튼 생성 (마스킹 적용)
+            question.options.forEach((option, index) => {
+                const buttonWrapper = document.createElement('div');
+                buttonWrapper.className = 'col-6 d-grid';
+
+                const button = document.createElement('button');
+                button.className = 'btn btn-lg btn-primary';
+                
+                // 텍스트 마스킹 적용
+                const displayText = maskText(option.name);
+                button.dataset.maskedText = displayText;
+                
+                button.textContent = `${index + 1}. ${displayText}`;
+                button.dataset.answer = option.name; // 정답 비교를 위해 데이터 속성 추가
+                button.onclick = () => checkAnswer(button, question.correct_answer); // 명시적으로 전달받은 정답 사용
+
+                buttonWrapper.appendChild(button);
+                optionsContainer.appendChild(buttonWrapper);
+            });
+            
+        } else if (question.type === 'memory_game') {
+            console.log('메모리 게임 문제 표시');
+            
+            // 이미지 컨테이너 숨기기 (메모리 게임에서는 상단 이미지 불필요)
+            document.querySelector('.image-container').style.display = 'none';
+            
+            // 메모리 게임 컨테이너 생성
+            const memoryGameContainer = document.createElement('div');
+            memoryGameContainer.className = 'memory-game-container';
+            optionsContainer.appendChild(memoryGameContainer);
+            
+            // 메모리 게임 타이틀 추가
+            const memoryTitle = document.createElement('div');
+            memoryTitle.className = 'text-center mb-3';
+            memoryTitle.innerHTML = '<h4>같은 캐릭터 카드를 찾아보세요!</h4>';
+            optionsContainer.insertBefore(memoryTitle, memoryGameContainer);
+            
+            // 메모리 게임 카드 생성
+            let flippedCards = [];
+            let matchedPairs = 0;
+            let canFlip = true;
+            
+            // 카드 생성 (4장의 카드, 모두 같은 캐릭터)
+            question.cards.forEach(card => {
+                const cardElement = document.createElement('div');
+                cardElement.className = 'memory-card';
+                cardElement.dataset.cardId = card.id;
+                
+                // 카드 앞면 (이미지)
+                const cardFront = document.createElement('div');
+                cardFront.className = 'memory-card-front';
+                const cardImage = document.createElement('img');
+                cardImage.src = `/static/uploads/${card.image}`;
+                cardImage.alt = card.name;
+                cardFront.appendChild(cardImage);
+                
+                // 카드 뒤면 (물음표)
+                const cardBack = document.createElement('div');
+                cardBack.className = 'memory-card-back';
+                cardBack.innerHTML = '<i class="fas fa-question"></i>';
+                
+                // 카드 클릭 이벤트
+                cardElement.addEventListener('click', function() {
+                    // 이미 뒤집힌 카드거나 더 이상 뒤집을 수 없는 상태면 무시
+                    if (!canFlip || this.classList.contains('flipped') || this.classList.contains('matched')) return;
+                    
+                    // 이미 2장이 뒤집혀 있으면 무시
+                    if (flippedCards.length >= 2) return;
+                    
+                    // 카드 뒤집기
+                    this.classList.add('flipped');
+                    flippedCards.push(this);
+                    
+                    // 2장의 카드가 뒤집혔을 때
+                    if (flippedCards.length === 2) {
+                        canFlip = false;
+                        
+                        // 두 카드의 페어 ID 가져오기
+                        const card1 = question.cards.find(c => c.id === flippedCards[0].dataset.cardId);
+                        const card2 = question.cards.find(c => c.id === flippedCards[1].dataset.cardId);
+                        
+                        // 잠시 기다린 후 매치 확인
+                        setTimeout(() => {
+                            // 같은 페어인지 확인
+                            if (card1.pair_id === card2.pair_id) {
+                                // 매치 성공
+                                flippedCards[0].classList.add('matched');
+                                flippedCards[1].classList.add('matched');
+                                
+                                // 매치 성공 효과는 제거하고 기본 효과만 사용
+                                
+                                matchedPairs++;
+                                
+                                // 모든 페어가 매치되었는지 확인 (2페어 = 4장)
+                                if (matchedPairs === 2) {
+                                    // 메모리 게임 완료 - 정답 처리
+                                    setTimeout(() => {
+                                        const dummyButton = document.createElement('button');
+                                        // 백엔드에서 명시적으로 전달받은 정답 사용
+                                        const correctAnswer = question.correct_answer;
+                                        dummyButton.dataset.answer = correctAnswer;
+                                        checkAnswer(dummyButton, correctAnswer);
+                                    }, 500);
+                                }
+                            } else {
+                                // 매치 실패 - 카드 다시 뒤집기
+                                flippedCards[0].classList.remove('flipped');
+                                flippedCards[1].classList.remove('flipped');
+                            }
+                            
+                            // 다음 선택 준비
+                            flippedCards = [];
+                            canFlip = true;
+                        }, 800);
+                    }
+                });
+                
+                // 카드 구성 요소 추가
+                cardElement.appendChild(cardFront);
+                cardElement.appendChild(cardBack);
+                memoryGameContainer.appendChild(cardElement);
+            });
+            
+            // 메모리 게임에서는 선택지 버튼이 필요 없음
+            
+        } else {
+            // 알 수 없는 문제 유형일 경우 오류 메시지 표시
+            console.log('알 수 없는 문제 유형:', question.type);
+            imageContainer.innerHTML = `<div class="alert alert-danger">알 수 없는 문제 유형: ${question.type}</div>`;
+        }
+        
+        updateProgressBar();
+        startElapsedTimer();
+    }
+    
+    // 이전 클립 관련 함수들은 새로운 준 방식으로 대체되어 삭제함
+    
+    // 한글 텍스트를 마스킹하는 함수
+    function maskText(text) {
+        // 글자가 너무 짧으면 그대로 반환
+        if (text.replace(/\s+/g, '').length < 4) {
+            return text;
+        }
+        
+        // 랜덤하게 4글자 선택할 위치 찾기
+        // 띄어쓰기를 제외한 실제 글자만 고려
+        const charPositions = [];
+        for (let i = 0; i < text.length; i++) {
+            if (text[i] !== ' ') {
+                charPositions.push(i);
+            }
+        }
+        
+        // 전체 글자 수가 4글자 미만이면 그대로 반환
+        if (charPositions.length < 4) {
+            return text;
+        }
+        
+        // 랜덤하게 4글자 선택
+        const selectedIndices = [];
+        while (selectedIndices.length < 4) {
+            const randomIndex = Math.floor(Math.random() * charPositions.length);
+            const charPos = charPositions[randomIndex];
+            
+            // 이미 선택된 위치가 아니면 추가
+            if (!selectedIndices.includes(charPos)) {
+                selectedIndices.push(charPos);
+            }
+        }
+        
+        // 정렬하여 순서대로 처리
+        selectedIndices.sort((a, b) => a - b);
+        
+        // 결과 문자열 생성
+        let result = '';
+        for (let i = 0; i < text.length; i++) {
+            if (text[i] === ' ') {
+                // 띄어쓰기는 그대로 유지
+                result += ' ';
+            } else if (selectedIndices.includes(i)) {
+                // 선택된 4글자는 그대로 표시
+                result += text[i];
+            } else {
+                // 나머지 글자는 'O'로 대체
+                result += 'O';
+            }
+        }
+        
+        return result;
+    }
+
+    function startElapsedTimer() {
+        const elapsedTimer = document.getElementById('elapsed-timer');
+        if (!elapsedTimer) return;
+        
+        // 기존 타이머 정리
+        clearInterval(timerInterval);
+        
+        // 경과 시간 표시 함수
+        function updateElapsedTime() {
+            if (!startTime) return;
+            
+            const now = new Date();
+            const elapsedMs = now - startTime;
+            const totalSeconds = Math.floor(elapsedMs / 1000); // 총 초 계산
+            const milliseconds = Math.floor((elapsedMs % 1000) / 10); // 밀리초를 2자리로 표시
+            
+            elapsedTimer.textContent = `${totalSeconds}.${milliseconds.toString().padStart(2, '0')}`;
+        }
+        
+        // 초기 시간 표시
+        updateElapsedTime();
+        
+        // 10밀리초마다 경과 시간 업데이트 (100ms)
+        timerInterval = setInterval(updateElapsedTime, 100);
+    }
+
+    function handleTimeout() {
+        timerBar.style.transition = 'none';
+        timerBar.style.width = '0%';
+        score -= 10;
+        scoreDisplay.textContent = score;
+        showUnifiedStamp('시간초과 -10', false);
+
+        const question = questions[currentQuestionIndex];
+        
+        // 메모리 게임 타입인 경우 특별 처리
+        if (question.type === 'memory_game') {
+            // 메모리 게임에서 시간 초과시 모든 카드 보이기
+            const memoryCards = document.querySelectorAll('.memory-card');
+            memoryCards.forEach(card => {
+                card.classList.add('flipped');
+                card.classList.add('matched'); // 클릭 불가능하게 설정
+            });
+            
+            currentQuestionIndex++;
+            setTimeout(showNextQuestion, 2000);
+            return;
+        }
+        
+        // 일반 문제 타입 처리 (이미지 크롭 또는 마스킹된 텍스트)
+        const allButtons = optionsContainer.querySelectorAll('button');
+        
+        // 문제 타입에 따라 정답 처리
+        let correctAnswer = '';
+        if (question.options && question.options.length > 0) {
+            correctAnswer = question.options[0].name;
+        }
+
+        allButtons.forEach(btn => {
+            btn.disabled = true;
+            if (btn.dataset.answer === correctAnswer) {
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-success');
+            }
+        });
+
+        currentQuestionIndex++;
+        setTimeout(showNextQuestion, 2000);
+    }
+
+    function checkAnswer(selectedButton, correctAnswer) {
+        clearInterval(timerInterval); // Stop the timer
+
+        const question = questions[currentQuestionIndex];
+        
+        // 메모리 게임 타입인 경우
+        if (question.type === 'memory_game') {
+            // 메모리 게임은 이미 맞춰서 완료한 경우이미로 무조건 정답 처리
+            score += 4;
+            correctAnswers++;
+            scoreDisplay.textContent = score;
+            showUnifiedStamp('정답 +4', true);
+            
+            // 잠시 대기 후 다음 문제로 이동
+            setTimeout(() => {
+                currentQuestionIndex++;
+                showNextQuestion();
+            }, 1500);
+            
+            return;
+        }
+
+        const allButtons = optionsContainer.querySelectorAll('button');
+        const selectedAnswerName = selectedButton.dataset.answer;
+
+        // 이미지 크롭 문제였다면 전체 이미지 표시
+        if (question.type === 'image_crop') {
+            const characterImage = document.getElementById('character-image');
+            const imageContainer = characterImage.closest('.image-container');
+            
+            // 준 클래스 제거
+            imageContainer.classList.remove('zoomed');
+            delete imageContainer.dataset.segment;
+        }
+        
+        // 텍스트 마스킹 문제였다면 원래 텍스트 보이기
+        if (question.type === 'masked_text') {
+            // 모든 버튼의 텍스트를 원래 텍스트로 복원
+            allButtons.forEach((btn, idx) => {
+                const originalText = btn.dataset.answer;
+                btn.textContent = `${idx + 1}. ${originalText}`;
+            });
+        }
+
+        allButtons.forEach(btn => {
+            btn.disabled = true;
+            const btnName = btn.dataset.answer;
+            if (btnName === correctAnswer) {
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-success');
+            }
+        });
+
+        if (selectedAnswerName === correctAnswer) {
+            score += 4; // 점수 변경: 10점 -> 4점
+            correctAnswers++;
+            scoreDisplay.textContent = score;
+            showUnifiedStamp('정답 +4', true);
+        } else {
+            selectedButton.classList.remove('btn-primary');
+            selectedButton.classList.add('btn-danger');
+            score -= 4; // 점수 변경: 10점 -> 4점
+            scoreDisplay.textContent = score;
+            showUnifiedStamp('오답 -4', false);
+        }
+        
+        // 잠시 대기 후 다음 문제로 이동
+        setTimeout(() => {
+            currentQuestionIndex++;
+            showNextQuestion();
+        }, 1500);
+    }
+
+    function updateProgressBar() {
+        const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+        progressBar.style.width = `${progress}%`;
+        progressBar.textContent = `${currentQuestionIndex + 1} / ${questions.length}`;
+    }
+
+    function endQuiz() {
+        clearInterval(timerInterval);
+        quizArea.style.display = 'none';
+        resultScreen.style.display = 'block';
+        finalScoreDisplay.textContent = score;
+        correctAnswersDisplay.textContent = correctAnswers;
+        totalQuestionsDisplay.textContent = questions.length;
+        
+        // 점수 저장 API 호출
+        const endTime = new Date();
+        const timeTaken = (endTime - startTime) / 1000; // 초 단위로 변환
+        
+        // 점수 저장 API 호출
+        fetch('/api/ultra_god_leaderboard/add', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                country: playerCountry,
+                school: playerAffiliation,
+                nickname: playerNickname,
+                score: score,
+                time_taken: timeTaken
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('점수 저장 성공:', data);
+        })
+        .catch(error => {
+            console.error('점수 저장 오류:', error);
+        });
+        
+        const endButtons = document.getElementById('end-buttons');
+        endButtons.innerHTML = '';
+
+        // 레더보드 버튼 추가
+        const leaderboardBtn = document.createElement('a');
+        leaderboardBtn.href = "{{ url_for('ultra_god_leaderboard') }}";
+        leaderboardBtn.className = 'btn btn-primary btn-lg me-3';
+        leaderboardBtn.innerHTML = '<i class="fas fa-trophy me-2"></i> 명예의 전당';
+        endButtons.appendChild(leaderboardBtn);
+
+        const restartBtn = document.createElement('a');
+        restartBtn.href = "{{ url_for('ultra_god_mode') }}";
+        restartBtn.className = 'btn btn-primary btn-lg me-3';
+        restartBtn.innerHTML = '<i class="fas fa-redo me-2"></i> 다시하기';
+        endButtons.appendChild(restartBtn);
+
+        const mainMenuBtn = document.createElement('a');
+        mainMenuBtn.href = "{{ url_for('index') }}";
+        mainMenuBtn.className = 'btn btn-secondary btn-lg';
+        mainMenuBtn.innerHTML = '<i class="fas fa-home me-2"></i> 메인 메뉴로';
+        endButtons.appendChild(mainMenuBtn);
+    }
+
+    document.addEventListener('DOMContentLoaded', startQuiz);
+</script>
+{% endblock %}
