@@ -53,18 +53,48 @@
     .memory-game-container {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
-        grid-gap: 10px;
-        margin: 0 auto;
+        grid-gap: 15px;
+        margin: 0 auto 20px;
         max-width: 500px;
+        position: relative;
+    }
+    
+    /* 매치 성공 효과 */
+    .match-success-effect {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: rgba(76, 175, 80, 0.8);
+        color: white;
+        font-size: 2rem;
+        font-weight: bold;
+        padding: 10px 20px;
+        border-radius: 10px;
+        z-index: 100;
+        animation: fadeInOut 0.8s ease-in-out;
+    }
+    
+    @keyframes fadeInOut {
+        0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+        50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+        100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
     }
     
     .memory-card {
         position: relative;
-        height: 150px;
+        height: 200px;
         perspective: 1000px;
         cursor: pointer;
         transform-style: preserve-3d;
-        transition: transform 0.5s;
+        transition: transform 0.6s, box-shadow 0.3s;
+        border-radius: 10px;
+        box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+    }
+    
+    .memory-card:hover {
+        box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+        transform: translateY(-5px);
     }
     
     .memory-card.flipped {
@@ -73,8 +103,16 @@
     
     .memory-card.matched {
         transform: rotateY(180deg);
-        opacity: 0.7;
         cursor: default;
+        box-shadow: 0 0 20px rgba(76, 175, 80, 0.8);
+        border: 3px solid #4CAF50;
+        animation: pulse 1.5s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(76, 175, 80, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
     }
     
     .memory-card-front,
@@ -83,30 +121,36 @@
         width: 100%;
         height: 100%;
         backface-visibility: hidden;
-        border-radius: 8px;
+        border-radius: 10px;
         display: flex;
         justify-content: center;
         align-items: center;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
     
     .memory-card-front {
-        background-color: #2980b9;
+        background-color: white;
         transform: rotateY(180deg);
         overflow: hidden;
+        padding: 8px;
     }
     
     .memory-card-back {
-        background-color: #3498db;
+        background: linear-gradient(135deg, #a29bfe, #6c5ce7);
         color: white;
-        font-size: 2rem;
         font-weight: bold;
+    }
+    
+    .memory-card-back i {
+        font-size: 3.5rem;
+        color: white;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
     }
     
     .memory-card-front img {
         width: 100%;
         height: 100%;
-        object-fit: cover;
+        object-fit: contain;
+        border-radius: 8px;
     }
     .image-container {
         position: relative;
@@ -232,6 +276,9 @@
         imageContainer.innerHTML = '';
         optionsContainer.innerHTML = ''; // Clear previous options
         
+        // 이미지 컨테이너 표시 (기본값)
+        document.querySelector('.image-container').style.display = 'flex';
+        
         // 문제 유형에 따라 이미지 표시 방식 변경
         if (question.type === 'image_crop') {
             console.log('이미지 크롭 문제 표시');
@@ -302,23 +349,30 @@
         } else if (question.type === 'memory_game') {
             console.log('메모리 게임 문제 표시');
             
+            // 이미지 컨테이너 숨기기 (메모리 게임에서는 상단 이미지 불필요)
+            document.querySelector('.image-container').style.display = 'none';
+            
             // 메모리 게임 컨테이너 생성
             const memoryGameContainer = document.createElement('div');
             memoryGameContainer.className = 'memory-game-container';
-            imageContainer.appendChild(memoryGameContainer);
+            optionsContainer.appendChild(memoryGameContainer);
+            
+            // 메모리 게임 타이틀 추가
+            const memoryTitle = document.createElement('div');
+            memoryTitle.className = 'text-center mb-3';
+            memoryTitle.innerHTML = '<h4>같은 캐릭터 카드를 찾아보세요!</h4>';
+            optionsContainer.insertBefore(memoryTitle, memoryGameContainer);
             
             // 메모리 게임 카드 생성
-            let hasFlippedCard = false;
-            let lockBoard = false;
-            let firstCard, secondCard;
+            let flippedCards = [];
             let matchedPairs = 0;
+            let canFlip = true;
             
-            // 카드 섞기 (이미 API에서 섞어서 전달함)
+            // 카드 생성 (4장의 카드, 모두 같은 캐릭터)
             question.cards.forEach(card => {
                 const cardElement = document.createElement('div');
                 cardElement.className = 'memory-card';
                 cardElement.dataset.cardId = card.id;
-                cardElement.dataset.characterId = card.character_id;
                 
                 // 카드 앞면 (이미지)
                 const cardFront = document.createElement('div');
@@ -331,52 +385,61 @@
                 // 카드 뒤면 (물음표)
                 const cardBack = document.createElement('div');
                 cardBack.className = 'memory-card-back';
-                cardBack.textContent = '?';
+                cardBack.innerHTML = '<i class="fas fa-question"></i>';
                 
                 // 카드 클릭 이벤트
                 cardElement.addEventListener('click', function() {
-                    // 이미 맞춰진 카드나 잠긴 보드는 무시
-                    if (lockBoard || this.classList.contains('matched') || this.classList.contains('flipped')) return;
+                    // 이미 뒤집힌 카드거나 더 이상 뒤집을 수 없는 상태면 무시
+                    if (!canFlip || this.classList.contains('flipped') || this.classList.contains('matched')) return;
+                    
+                    // 이미 2장이 뒤집혀 있으면 무시
+                    if (flippedCards.length >= 2) return;
                     
                     // 카드 뒤집기
                     this.classList.add('flipped');
+                    flippedCards.push(this);
                     
-                    if (!hasFlippedCard) {
-                        // 첫 번째 카드
-                        hasFlippedCard = true;
-                        firstCard = this;
-                    } else {
-                        // 두 번째 카드
-                        hasFlippedCard = false;
-                        secondCard = this;
+                    // 2장의 카드가 뒤집혔을 때
+                    if (flippedCards.length === 2) {
+                        canFlip = false;
                         
-                        // 두 카드가 맞는지 확인
-                        if (firstCard.dataset.characterId === secondCard.dataset.characterId) {
-                            // 맞은 경우
-                            firstCard.classList.add('matched');
-                            secondCard.classList.add('matched');
-                            matchedPairs++;
-                            
-                            // 모든 카드가 맞춰졌는지 확인
-                            if (matchedPairs === question.cards.length / 2) {
-                                setTimeout(() => {
+                        // 두 카드의 페어 ID 가져오기
+                        const card1 = question.cards.find(c => c.id === flippedCards[0].dataset.cardId);
+                        const card2 = question.cards.find(c => c.id === flippedCards[1].dataset.cardId);
+                        
+                        // 잠시 기다린 후 매치 확인
+                        setTimeout(() => {
+                            // 같은 페어인지 확인
+                            if (card1.pair_id === card2.pair_id) {
+                                // 매치 성공
+                                flippedCards[0].classList.add('matched');
+                                flippedCards[1].classList.add('matched');
+                                
+                                // 매치 성공 효과는 제거하고 기본 효과만 사용
+                                
+                                matchedPairs++;
+                                
+                                // 모든 페어가 매치되었는지 확인 (2페어 = 4장)
+                                if (matchedPairs === 2) {
                                     // 메모리 게임 완료 - 정답 처리
-                                    const dummyButton = document.createElement('button');
-                                    // 메모리 게임에서는 카드의 캐릭터 이름을 정답으로 사용
-                                    const correctAnswer = question.cards[0].name;
-                                    dummyButton.dataset.answer = correctAnswer;
-                                    checkAnswer(dummyButton, correctAnswer);
-                                }, 1000);
+                                    setTimeout(() => {
+                                        const dummyButton = document.createElement('button');
+                                        // 정답은 아무 캐릭터 이름이나 사용 가능
+                                        const correctAnswer = question.cards[0].name;
+                                        dummyButton.dataset.answer = correctAnswer;
+                                        checkAnswer(dummyButton, correctAnswer);
+                                    }, 500);
+                                }
+                            } else {
+                                // 매치 실패 - 카드 다시 뒤집기
+                                flippedCards[0].classList.remove('flipped');
+                                flippedCards[1].classList.remove('flipped');
                             }
-                        } else {
-                            // 다른 경우 - 카드 다시 뒤집기
-                            lockBoard = true;
-                            setTimeout(() => {
-                                firstCard.classList.remove('flipped');
-                                secondCard.classList.remove('flipped');
-                                lockBoard = false;
-                            }, 1000);
-                        }
+                            
+                            // 다음 선택 준비
+                            flippedCards = [];
+                            canFlip = true;
+                        }, 800);
                     }
                 });
                 
@@ -535,7 +598,7 @@
             score += 4;
             correctAnswers++;
             scoreDisplay.textContent = score;
-            showUnifiedStamp('메모리 게임 성공 +4', true);
+            showUnifiedStamp('정답 +4', true);
             
             // 잠시 대기 후 다음 문제로 이동
             setTimeout(() => {

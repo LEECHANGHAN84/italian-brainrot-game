@@ -464,30 +464,36 @@ def god_quiz():
     
     # 메모리 게임 문제 5개 생성
     for _ in range(5):
-        # 정답이 될 캐릭터 랜덤 선택
-        correct_character = random.choice(all_characters)
+        # 서로 다른 캐릭터 2개 랜덤 선택
+        selected_characters = random.sample(all_characters, 2)
+        character1 = selected_characters[0]
+        character2 = selected_characters[1]
         
-        # 메모리 게임은 같은 캐릭터 이미지 4장을 사용
+        # 메모리 게임은 2개의 서로 다른 캐릭터 이미지를 각각 2장씩 사용
         cards = [{
-            'id': f"{correct_character.id}_1",
-            'character_id': correct_character.id,
-            'name': correct_character.name_ko,
-            'image': correct_character.image_file
+            'id': f"{character1.id}_1",
+            'character_id': character1.id,
+            'name': character1.name_ko,
+            'image': character1.image_file,
+            'pair_id': 1  # 페어 식별자 추가
         }, {
-            'id': f"{correct_character.id}_2",
-            'character_id': correct_character.id,
-            'name': correct_character.name_ko,
-            'image': correct_character.image_file
+            'id': f"{character1.id}_2",
+            'character_id': character1.id,
+            'name': character1.name_ko,
+            'image': character1.image_file,
+            'pair_id': 1  # 같은 페어 식별자
         }, {
-            'id': f"{correct_character.id}_3",
-            'character_id': correct_character.id,
-            'name': correct_character.name_ko,
-            'image': correct_character.image_file
+            'id': f"{character2.id}_1",
+            'character_id': character2.id,
+            'name': character2.name_ko,
+            'image': character2.image_file,
+            'pair_id': 2  # 다른 페어 식별자
         }, {
-            'id': f"{correct_character.id}_4",
-            'character_id': correct_character.id,
-            'name': correct_character.name_ko,
-            'image': correct_character.image_file
+            'id': f"{character2.id}_2",
+            'character_id': character2.id,
+            'name': character2.name_ko,
+            'image': character2.image_file,
+            'pair_id': 2  # 같은 페어 식별자
         }]
         
         # 카드 섞기
@@ -557,6 +563,8 @@ def add_god_score():
     db.session.commit()
     
     return jsonify({'success': True, 'message': '점수가 성공적으로 추가되었습니다.'}), 201
+
+
 
 
 # This block ensures that the database tables are created when the app starts.

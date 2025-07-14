@@ -1,0 +1,308 @@
+{% extends "layout.html" %}
+{% from "macros/quiz_ui.html" import render_quiz_ui %}
+{% from "macros/stamp_macro.html" import stamp_system %}
+
+{% block title %}메모리 게임{% endblock %}
+
+{% block content %}
+<style>
+    /* 메모리 게임 스타일 */
+    .memory-card {
+        perspective: 1000px;
+        width: 100%;
+        aspect-ratio: 1;
+        margin-bottom: 1rem;
+        cursor: pointer;
+        position: relative;
+    }
+    
+    .memory-card-inner {
+        width: 100%;
+        height: 100%;
+        position: relative;
+        transition: transform 0.6s;
+        transform-style: preserve-3d;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        border-radius: 10px;
+    }
+    
+    .memory-card.flipped .memory-card-inner {
+        transform: rotateY(180deg);
+    }
+    
+    .memory-card-front, .memory-card-back {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        backface-visibility: hidden;
+        border-radius: 10px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+    }
+    
+    .memory-card-front {
+        background: linear-gradient(135deg, #5f27cd, #341f97);
+        color: white;
+        font-size: 2rem;
+        transform: rotateY(180deg);
+    }
+    
+    .memory-card-back {
+        background: linear-gradient(135deg, #a29bfe, #6c5ce7);
+        color: white;
+        font-size: 2rem;
+    }
+    
+    .memory-card img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .memory-card-back i {
+        font-size: 3rem;
+    }
+    
+    .memory-cards-container {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        margin: 0 auto;
+        max-width: 500px;
+    }
+    
+    .question-title {
+        font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
+        font-weight: 700;
+        font-size: 1.5rem;
+        margin-bottom: 1.5rem;
+        color: #341f97;
+        text-align: center;
+    }
+    
+    .memory-feedback {
+        text-align: center;
+        margin: 1rem 0;
+        font-weight: 600;
+        min-height: 2rem;
+    }
+    
+    .memory-feedback.correct {
+        color: #2ecc71;
+    }
+    
+    .memory-feedback.incorrect {
+        color: #e74c3c;
+    }
+    
+    .memory-next-btn {
+        display: none;
+        margin: 1rem auto;
+    }
+</style>
+
+    {% call render_quiz_ui('메모리 게임', show_timer=False) %}
+        <div class="question-title">같은 캐릭터 카드를 찾아보세요!</div>
+        <div class="memory-feedback" id="memory-feedback"></div>
+        <div class="memory-cards-container" id="memory-cards-container">
+            <!-- Cards will be inserted here by JavaScript -->
+        </div>
+        <button id="memory-next-btn" class="btn btn-primary memory-next-btn">다음 문제</button>
+    {% endcall %}
+{% endblock %}
+
+{% block scripts %}
+{{ stamp_system() }}
+<script>
+    // --- DOM Elements ---
+    const scoreDisplay = document.getElementById('score');
+    const quizArea = document.getElementById('quiz-area');
+    const loadingScreen = document.getElementById('loading-screen');
+    const resultScreen = document.getElementById('result-screen');
+    const finalScoreDisplay = document.getElementById('final-score');
+    const correctAnswersDisplay = document.getElementById('correct-answers');
+    const totalQuestionsDisplay = document.getElementById('total-questions');
+    const memoryCardsContainer = document.getElementById('memory-cards-container');
+    const memoryFeedback = document.getElementById('memory-feedback');
+    const memoryNextBtn = document.getElementById('memory-next-btn');
+    const progressBar = document.getElementById('progress-bar');
+
+    // --- Game State ---
+    let score = 0;
+    let questions = [];
+    let currentQuestionIndex = 0;
+    let correctAnswers = 0;
+    let flippedCards = [];
+    let matchedCards = 0;
+    let canFlip = true;
+
+    // --- Core Functions ---
+    async function startQuiz() {
+        loadingScreen.style.display = 'block';
+        quizArea.style.display = 'none';
+        resultScreen.style.display = 'none';
+        
+        try {
+            const response = await fetch('/api/quiz/memory_game');
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || '퀴즈 데이터를 불러오는 데 실패했습니다.');
+            }
+            
+            questions = await response.json();
+            if (questions.length === 0) {
+                throw new Error('표시할 퀴즈가 없습니다.');
+            }
+            
+            // Reset state for a new game
+            currentQuestionIndex = 0;
+            score = 0;
+            correctAnswers = 0;
+            scoreDisplay.textContent = score;
+            
+            // Show first question
+            showNextQuestion();
+            
+            // Show quiz area, hide loading
+            loadingScreen.style.display = 'none';
+            quizArea.style.display = 'block';
+            
+            // Update progress bar
+            updateProgressBar();
+            
+        } catch (error) {
+            alert(`오류: ${error.message}`);
+            console.error('Error starting quiz:', error);
+            // Return to main menu on error
+            window.location.href = '/';
+        }
+    }
+
+    function showNextQuestion() {
+        // Reset state for new question
+        flippedCards = [];
+        matchedCards = 0;
+        canFlip = true;
+        memoryFeedback.textContent = '';
+        memoryFeedback.className = 'memory-feedback';
+        memoryNextBtn.style.display = 'none';
+        
+        if (currentQuestionIndex >= questions.length) {
+            endQuiz();
+            return;
+        }
+        
+        const question = questions[currentQuestionIndex];
+        
+        // Clear previous cards
+        memoryCardsContainer.innerHTML = '';
+        
+        // Create 4 cards with the same character
+        for (let i = 0; i < 4; i++) {
+            const card = document.createElement('div');
+            card.className = 'memory-card';
+            card.dataset.index = i;
+            
+            card.innerHTML = `
+                <div class="memory-card-inner">
+                    <div class="memory-card-front">
+                        <img src="/static/uploads/${question.image_file}" alt="${question.character_name}">
+                    </div>
+                    <div class="memory-card-back">
+                        <i class="fas fa-question"></i>
+                    </div>
+                </div>
+            `;
+            
+            card.addEventListener('click', () => flipCard(card));
+            memoryCardsContainer.appendChild(card);
+        }
+    }
+    
+    function flipCard(card) {
+        if (!canFlip || card.classList.contains('flipped') || flippedCards.length >= 2) {
+            return;
+        }
+        
+        // Flip the card
+        card.classList.add('flipped');
+        flippedCards.push(card);
+        
+        // If we have 2 cards flipped, check if they match
+        if (flippedCards.length === 2) {
+            canFlip = false;
+            
+            // In memory game, all cards have the same character, so they always match
+            // But we'll wait a moment before allowing more flips
+            setTimeout(() => {
+                matchedCards += 2;
+                flippedCards = [];
+                canFlip = true;
+                
+                // Check if all cards are matched
+                if (matchedCards === 4) {
+                    handleCorrectAnswer();
+                }
+            }, 500);
+        }
+    }
+    
+    function handleCorrectAnswer() {
+        score += 10;
+        correctAnswers++;
+        scoreDisplay.textContent = score;
+        
+        memoryFeedback.textContent = '정답입니다!';
+        memoryFeedback.className = 'memory-feedback correct';
+        
+        // Show next button
+        memoryNextBtn.style.display = 'block';
+        memoryNextBtn.onclick = () => {
+            currentQuestionIndex++;
+            updateProgressBar();
+            showNextQuestion();
+        };
+    }
+    
+    function updateProgressBar() {
+        const progress = ((currentQuestionIndex) / questions.length) * 100;
+        progressBar.style.width = `${progress}%`;
+        progressBar.setAttribute('aria-valuenow', progress);
+    }
+    
+    function endQuiz() {
+        quizArea.style.display = 'none';
+        resultScreen.style.display = 'block';
+        
+        finalScoreDisplay.textContent = score;
+        correctAnswersDisplay.textContent = correctAnswers;
+        totalQuestionsDisplay.textContent = questions.length;
+        
+        // Add event listener to the retry button
+        document.getElementById('retry-button').addEventListener('click', startQuiz);
+        
+        // Show appropriate message based on score
+        const resultMessage = document.getElementById('result-message');
+        const resultIcon = document.getElementById('result-icon');
+        
+        if (correctAnswers === questions.length) {
+            resultMessage.textContent = '완벽해요! 모든 문제를 맞혔습니다!';
+            resultIcon.className = 'fas fa-crown text-warning mb-3';
+        } else if (correctAnswers >= Math.floor(questions.length * 0.7)) {
+            resultMessage.textContent = '훌륭해요! 대부분의 문제를 맞혔습니다!';
+            resultIcon.className = 'fas fa-star text-warning mb-3';
+        } else if (correctAnswers >= Math.floor(questions.length * 0.4)) {
+            resultMessage.textContent = '좋아요! 절반 정도 맞혔네요!';
+            resultIcon.className = 'fas fa-thumbs-up text-primary mb-3';
+        } else {
+            resultMessage.textContent = '아쉽네요. 다시 한번 도전해보세요!';
+            resultIcon.className = 'fas fa-heart text-danger mb-3';
+        }
+    }
+
+    // --- Event Listener ---
+    document.addEventListener('DOMContentLoaded', startQuiz);
+</script>
+{% endblock %}
