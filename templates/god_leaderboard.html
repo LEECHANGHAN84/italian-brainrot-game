@@ -216,6 +216,40 @@
         <div class="podium-stand podium-2">
             <img src="{{ url_for('static', filename='images/silver-medal-ribbon.svg') }}" alt="2등" class="podium-medal">
             <div class="podium-details">
+                <span class="podium-country">
+                    {% set country_code = scores[1].country | lower %}
+                    {% if country_code == 'south korea' %}
+                        <span class="flag-icon">🇰🇷</span>
+                    {% elif country_code == 'japan' %}
+                        <span class="flag-icon">🇯🇵</span>
+                    {% elif country_code == 'china' %}
+                        <span class="flag-icon">🇨🇳</span>
+                    {% elif country_code == 'united states' %}
+                        <span class="flag-icon">🇺🇸</span>
+                    {% elif country_code == 'united kingdom' %}
+                        <span class="flag-icon">🇬🇧</span>
+                    {% elif country_code == 'france' %}
+                        <span class="flag-icon">🇫🇷</span>
+                    {% elif country_code == 'germany' %}
+                        <span class="flag-icon">🇩🇪</span>
+                    {% elif country_code == 'italy' %}
+                        <span class="flag-icon">🇮🇹</span>
+                    {% elif country_code == 'spain' %}
+                        <span class="flag-icon">🇪🇸</span>
+                    {% elif country_code == 'canada' %}
+                        <span class="flag-icon">🇨🇦</span>
+                    {% elif country_code == 'australia' %}
+                        <span class="flag-icon">🇦🇺</span>
+                    {% elif country_code == 'brazil' %}
+                        <span class="flag-icon">🇧🇷</span>
+                    {% elif country_code == 'russia' %}
+                        <span class="flag-icon">🇷🇺</span>
+                    {% elif country_code == 'india' %}
+                        <span class="flag-icon">🇮🇳</span>
+                    {% else %}
+                        <span class="flag-icon">🏳️</span>
+                    {% endif %}
+                </span>
                 <span class="podium-nickname">{{ scores[1].nickname }}</span>
                 <span class="podium-school">{{ scores[1].school }}</span>
                 <span class="podium-score">{{ scores[1].score }}점</span>
@@ -227,6 +261,40 @@
         <div class="podium-stand podium-1">
             <img src="{{ url_for('static', filename='images/gold-medal-ribbon.svg') }}" alt="1등" class="podium-medal">
             <div class="podium-details">
+                <span class="podium-country">
+                    {% set country_code = scores[0].country | lower %}
+                    {% if country_code == 'south korea' %}
+                        <span class="flag-icon">🇰🇷</span>
+                    {% elif country_code == 'japan' %}
+                        <span class="flag-icon">🇯🇵</span>
+                    {% elif country_code == 'china' %}
+                        <span class="flag-icon">🇨🇳</span>
+                    {% elif country_code == 'united states' %}
+                        <span class="flag-icon">🇺🇸</span>
+                    {% elif country_code == 'united kingdom' %}
+                        <span class="flag-icon">🇬🇧</span>
+                    {% elif country_code == 'france' %}
+                        <span class="flag-icon">🇫🇷</span>
+                    {% elif country_code == 'germany' %}
+                        <span class="flag-icon">🇩🇪</span>
+                    {% elif country_code == 'italy' %}
+                        <span class="flag-icon">🇮🇹</span>
+                    {% elif country_code == 'spain' %}
+                        <span class="flag-icon">🇪🇸</span>
+                    {% elif country_code == 'canada' %}
+                        <span class="flag-icon">🇨🇦</span>
+                    {% elif country_code == 'australia' %}
+                        <span class="flag-icon">🇦🇺</span>
+                    {% elif country_code == 'brazil' %}
+                        <span class="flag-icon">🇧🇷</span>
+                    {% elif country_code == 'russia' %}
+                        <span class="flag-icon">🇷🇺</span>
+                    {% elif country_code == 'india' %}
+                        <span class="flag-icon">🇮🇳</span>
+                    {% else %}
+                        <span class="flag-icon">🏳️</span>
+                    {% endif %}
+                </span>
                 <span class="podium-nickname">{{ scores[0].nickname }}</span>
                 <span class="podium-school">{{ scores[0].school }}</span>
                 <span class="podium-score">{{ scores[0].score }}점</span>
@@ -238,6 +306,40 @@
         <div class="podium-stand podium-3">
             <img src="{{ url_for('static', filename='images/bronze-medal-ribbon.svg') }}" alt="3등" class="podium-medal">
             <div class="podium-details">
+                <span class="podium-country">
+                    {% set country_code = scores[2].country | lower %}
+                    {% if country_code == 'south korea' %}
+                        <span class="flag-icon">🇰🇷</span>
+                    {% elif country_code == 'japan' %}
+                        <span class="flag-icon">🇯🇵</span>
+                    {% elif country_code == 'china' %}
+                        <span class="flag-icon">🇨🇳</span>
+                    {% elif country_code == 'united states' %}
+                        <span class="flag-icon">🇺🇸</span>
+                    {% elif country_code == 'united kingdom' %}
+                        <span class="flag-icon">🇬🇧</span>
+                    {% elif country_code == 'france' %}
+                        <span class="flag-icon">🇫🇷</span>
+                    {% elif country_code == 'germany' %}
+                        <span class="flag-icon">🇩🇪</span>
+                    {% elif country_code == 'italy' %}
+                        <span class="flag-icon">🇮🇹</span>
+                    {% elif country_code == 'spain' %}
+                        <span class="flag-icon">🇪🇸</span>
+                    {% elif country_code == 'canada' %}
+                        <span class="flag-icon">🇨🇦</span>
+                    {% elif country_code == 'australia' %}
+                        <span class="flag-icon">🇦🇺</span>
+                    {% elif country_code == 'brazil' %}
+                        <span class="flag-icon">🇧🇷</span>
+                    {% elif country_code == 'russia' %}
+                        <span class="flag-icon">🇷🇺</span>
+                    {% elif country_code == 'india' %}
+                        <span class="flag-icon">🇮🇳</span>
+                    {% else %}
+                        <span class="flag-icon">🏳️</span>
+                    {% endif %}
+                </span>
                 <span class="podium-nickname">{{ scores[2].nickname }}</span>
                 <span class="podium-school">{{ scores[2].school }}</span>
                 <span class="podium-score">{{ scores[2].score }}점</span>
@@ -260,7 +362,8 @@
             <thead>
                 <tr style="background: linear-gradient(135deg, #c41a3b, #ff4d4d); color: white;">
                     <th scope="col" class="py-3">순위</th>
-                    <th scope="col" class="py-3">학교</th>
+                    <th scope="col" class="py-3">국가</th>
+                    <th scope="col" class="py-3">소속</th>
                     <th scope="col" class="py-3">별명</th>
                     <th scope="col" class="py-3">점수</th>
                     <th scope="col" class="py-3">시간(초)</th>
@@ -280,6 +383,40 @@
                             {{ loop.index }}
                         {% endif %}
                     </th>
+                    <td class="py-3">
+                        {% set country_code = score.country | lower %}
+                        {% if country_code == 'south korea' %}
+                            <span class="flag-icon">🇰🇷</span> {{ score.country }}
+                        {% elif country_code == 'japan' %}
+                            <span class="flag-icon">🇯🇵</span> {{ score.country }}
+                        {% elif country_code == 'china' %}
+                            <span class="flag-icon">🇨🇳</span> {{ score.country }}
+                        {% elif country_code == 'united states' %}
+                            <span class="flag-icon">🇺🇸</span> {{ score.country }}
+                        {% elif country_code == 'united kingdom' %}
+                            <span class="flag-icon">🇬🇧</span> {{ score.country }}
+                        {% elif country_code == 'france' %}
+                            <span class="flag-icon">🇫🇷</span> {{ score.country }}
+                        {% elif country_code == 'germany' %}
+                            <span class="flag-icon">🇩🇪</span> {{ score.country }}
+                        {% elif country_code == 'italy' %}
+                            <span class="flag-icon">🇮🇹</span> {{ score.country }}
+                        {% elif country_code == 'spain' %}
+                            <span class="flag-icon">🇪🇸</span> {{ score.country }}
+                        {% elif country_code == 'canada' %}
+                            <span class="flag-icon">🇨🇦</span> {{ score.country }}
+                        {% elif country_code == 'australia' %}
+                            <span class="flag-icon">🇦🇺</span> {{ score.country }}
+                        {% elif country_code == 'brazil' %}
+                            <span class="flag-icon">🇧🇷</span> {{ score.country }}
+                        {% elif country_code == 'russia' %}
+                            <span class="flag-icon">🇷🇺</span> {{ score.country }}
+                        {% elif country_code == 'india' %}
+                            <span class="flag-icon">🇮🇳</span> {{ score.country }}
+                        {% else %}
+                            <span class="flag-icon">🏳️</span> {{ score.country }}
+                        {% endif %}
+                    </td>
                     <td class="py-3">{{ score.school }}</td>
                     <td class="py-3 fw-bold">{{ score.nickname }}</td>
                     <td class="py-3">{{ score.score }}점</td>
@@ -288,7 +425,7 @@
                 {% endfor %}
                 {% if not scores %}
                 <tr>
-                    <td colspan="5" class="text-center py-4" style="font-family: 'Jua', sans-serif;">
+                    <td colspan="6" class="text-center py-4" style="font-family: 'Jua', sans-serif;">
                         <i class="fas fa-ghost me-2"></i> 아직 등록된 점수가 없습니다.
                     </td>
                 </tr>
@@ -309,7 +446,7 @@
         ">
             <i class="fas fa-home me-2"></i> 메인 메뉴로 돌아가기
         </a>
-        <a href="{{ url_for('leaderboard') }}" class="btn btn-lg px-4 py-2" style="
+        <a href="{{ url_for('index') }}" class="btn btn-lg px-4 py-2" style="
             font-family: 'Jua', sans-serif;
             background: transparent;
             color: #c41a3b;
@@ -348,7 +485,24 @@
     
     .dark-mode .btn:hover {
         box-shadow: 0 5px 20px rgba(196, 26, 59, 0.6) !important;
-        transform: translateY(-2px);
+    }
+    
+    .flag-icon {
+        font-size: 1.5rem;
+        margin-right: 0.5rem;
+        display: inline-block;
+        vertical-align: middle;
+    }
+    
+    .podium-country {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-size: 2rem;
+    }
+    
+    .podium-country .flag-icon {
+        font-size: 2.5rem;
+        margin-right: 0;
     }
 </style>
 {% endblock %}
