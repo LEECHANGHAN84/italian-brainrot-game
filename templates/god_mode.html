@@ -48,6 +48,66 @@
     }
     
     /* 이미지 컨테이너 스타일 */
+    
+    /* 메모리 게임 스타일 */
+    .memory-game-container {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        grid-gap: 10px;
+        margin: 0 auto;
+        max-width: 500px;
+    }
+    
+    .memory-card {
+        position: relative;
+        height: 150px;
+        perspective: 1000px;
+        cursor: pointer;
+        transform-style: preserve-3d;
+        transition: transform 0.5s;
+    }
+    
+    .memory-card.flipped {
+        transform: rotateY(180deg);
+    }
+    
+    .memory-card.matched {
+        transform: rotateY(180deg);
+        opacity: 0.7;
+        cursor: default;
+    }
+    
+    .memory-card-front,
+    .memory-card-back {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        backface-visibility: hidden;
+        border-radius: 8px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    
+    .memory-card-front {
+        background-color: #2980b9;
+        transform: rotateY(180deg);
+        overflow: hidden;
+    }
+    
+    .memory-card-back {
+        background-color: #3498db;
+        color: white;
+        font-size: 2rem;
+        font-weight: bold;
+    }
+    
+    .memory-card-front img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
     .image-container {
         position: relative;
         width: 100%;
@@ -169,13 +229,19 @@
         console.log('현재 문제 유형:', question.type, question);
         
         // 이미지 영역 초기화
-        imageContainer.innerHTML = '<img id="character-image" src="" alt="캡릭터 이미지">';
-        const characterImage = document.getElementById('character-image');
+        imageContainer.innerHTML = '';
+        optionsContainer.innerHTML = ''; // Clear previous options
         
         // 문제 유형에 따라 이미지 표시 방식 변경
-        if (question.type === 'partial_image') {
-            console.log('이미지 1/4 보이는 문제 표시:', question.visible_part);
+        if (question.type === 'image_crop') {
+            console.log('이미지 크롭 문제 표시');
+            
+            // 이미지 요소 생성
+            const characterImage = document.createElement('img');
+            characterImage.id = 'character-image';
+            characterImage.alt = '캐릭터 이미지';
             characterImage.src = `/static/uploads/${question.image}`;
+            imageContainer.appendChild(characterImage);
             
             // 이미지가 로드된 후 준 클래스 적용
             characterImage.onload = () => {
@@ -187,72 +253,146 @@
                 question.applied_segment = segment; // 적용된 세그먼트 저장
             };
             
-            // 문제 유형 표시 삭제 - 사용자 요청에 따라 표시하지 않음
-        } else if (question.type === 'memory') {
-            // 메모리 게임 유형 처리
-            console.log('메모리 게임 문제 표시');
-            // 메모리 게임 UI는 별도로 구현 필요
-            // 임시로 메시지 표시
-            imageContainer.innerHTML = '<div class="alert alert-info">메모리 게임 문제 (준비 중)</div>';
+            // 선택지 버튼 생성
+            question.options.forEach((option, index) => {
+                const buttonWrapper = document.createElement('div');
+                buttonWrapper.className = 'col-6 d-grid';
+
+                const button = document.createElement('button');
+                button.className = 'btn btn-lg btn-primary';
+                button.textContent = `${index + 1}. ${option.name}`;
+                button.dataset.answer = option.name; // 정답 비교를 위해 데이터 속성 추가
+                button.onclick = () => checkAnswer(button, question.options[0].name); // 첫 번째 옵션이 정답
+
+                buttonWrapper.appendChild(button);
+                optionsContainer.appendChild(buttonWrapper);
+            });
             
-        } else if (question.type === 'standard') {
-            // 일반 문제일 경우 기본 이미지 표시
-            console.log('일반 문제 표시:', question.quiz_type);
+        } else if (question.type === 'masked_text') {
+            console.log('텍스트 마스킹 문제 표시');
             
+            // 이미지 요소 생성
+            const characterImage = document.createElement('img');
+            characterImage.id = 'character-image';
+            characterImage.alt = '캐릭터 이미지';
             characterImage.src = `/static/uploads/${question.image}`;
             characterImage.className = 'img-fluid rounded';
+            imageContainer.appendChild(characterImage);
             
-            // 이미지 크롭 유형인 경우 클립핑 적용
-            if (question.quiz_type === 'image_crop') {
-                console.log('이미지 클립 문제 표시');
-                
-                // 이미지가 로드된 후 준 클래스 적용
-                characterImage.onload = () => {
-                    const imageContainer = characterImage.closest('.image-container');
-                    // 4개의 사분면 (0: TL, 1: TR, 2: BL, 3: BR)
-                    const segment = Math.floor(Math.random() * 4);
-                    imageContainer.dataset.segment = segment;
-                    imageContainer.classList.add('zoomed');
-                    question.applied_segment = segment; // 적용된 세그먼트 저장
-                };
-                
-                // 문제 유형 표시 삭제 - 사용자 요청에 따라 표시하지 않음
-            } else if (question.quiz_type === 'masked_text') {
-                console.log('텍스트 마스킹 문제 표시');
-                // 일반 이미지는 그대로 표시
-                characterImage.className = 'img-fluid rounded';
-            }
-        } else {
-            // 알 수 없는 문제 유형일 경우 기본 이미지 표시
-            console.log('알 수 없는 문제 유형:', question.type);
-            characterImage.src = `/static/uploads/${question.image}`;
-            characterImage.className = 'img-fluid rounded';
-        }
-        
-        optionsContainer.innerHTML = ''; // Clear previous options
+            // 선택지 버튼 생성 (마스킹 적용)
+            question.options.forEach((option, index) => {
+                const buttonWrapper = document.createElement('div');
+                buttonWrapper.className = 'col-6 d-grid';
 
-        question.options.forEach((optionText, index) => {
-            const buttonWrapper = document.createElement('div');
-            buttonWrapper.className = 'col-6 d-grid';
-
-            const button = document.createElement('button');
-            button.className = 'btn btn-lg btn-primary';
-            
-            // masked_text 퀴즈 유형일 경우 텍스트 마스킹 적용
-            let displayText = optionText;
-            if (question.type === 'standard' && question.quiz_type === 'masked_text') {
-                displayText = maskText(optionText);
-                // 마스킹된 텍스트를 버튼에 저장
+                const button = document.createElement('button');
+                button.className = 'btn btn-lg btn-primary';
+                
+                // 텍스트 마스킹 적용
+                const displayText = maskText(option.name);
                 button.dataset.maskedText = displayText;
-            }
-            
-            button.textContent = `${index + 1}. ${displayText}`;
-            button.dataset.answer = optionText; // 정답 비교를 위해 데이터 속성 추가
-            button.onclick = () => checkAnswer(button, question.answer);
+                
+                button.textContent = `${index + 1}. ${displayText}`;
+                button.dataset.answer = option.name; // 정답 비교를 위해 데이터 속성 추가
+                button.onclick = () => checkAnswer(button, question.options[0].name); // 첫 번째 옵션이 정답
 
-            buttonWrapper.appendChild(button);
-            optionsContainer.appendChild(buttonWrapper);
-        });
+                buttonWrapper.appendChild(button);
+                optionsContainer.appendChild(buttonWrapper);
+            });
+            
+        } else if (question.type === 'memory_game') {
+            console.log('메모리 게임 문제 표시');
+            
+            // 메모리 게임 컨테이너 생성
+            const memoryGameContainer = document.createElement('div');
+            memoryGameContainer.className = 'memory-game-container';
+            imageContainer.appendChild(memoryGameContainer);
+            
+            // 메모리 게임 카드 생성
+            let hasFlippedCard = false;
+            let lockBoard = false;
+            let firstCard, secondCard;
+            let matchedPairs = 0;
+            
+            // 카드 섞기 (이미 API에서 섞어서 전달함)
+            question.cards.forEach(card => {
+                const cardElement = document.createElement('div');
+                cardElement.className = 'memory-card';
+                cardElement.dataset.cardId = card.id;
+                cardElement.dataset.characterId = card.character_id;
+                
+                // 카드 앞면 (이미지)
+                const cardFront = document.createElement('div');
+                cardFront.className = 'memory-card-front';
+                const cardImage = document.createElement('img');
+                cardImage.src = `/static/uploads/${card.image}`;
+                cardImage.alt = card.name;
+                cardFront.appendChild(cardImage);
+                
+                // 카드 뒤면 (물음표)
+                const cardBack = document.createElement('div');
+                cardBack.className = 'memory-card-back';
+                cardBack.textContent = '?';
+                
+                // 카드 클릭 이벤트
+                cardElement.addEventListener('click', function() {
+                    // 이미 맞춰진 카드나 잠긴 보드는 무시
+                    if (lockBoard || this.classList.contains('matched') || this.classList.contains('flipped')) return;
+                    
+                    // 카드 뒤집기
+                    this.classList.add('flipped');
+                    
+                    if (!hasFlippedCard) {
+                        // 첫 번째 카드
+                        hasFlippedCard = true;
+                        firstCard = this;
+                    } else {
+                        // 두 번째 카드
+                        hasFlippedCard = false;
+                        secondCard = this;
+                        
+                        // 두 카드가 맞는지 확인
+                        if (firstCard.dataset.characterId === secondCard.dataset.characterId) {
+                            // 맞은 경우
+                            firstCard.classList.add('matched');
+                            secondCard.classList.add('matched');
+                            matchedPairs++;
+                            
+                            // 모든 카드가 맞춰졌는지 확인
+                            if (matchedPairs === question.cards.length / 2) {
+                                setTimeout(() => {
+                                    // 메모리 게임 완료 - 정답 처리
+                                    const dummyButton = document.createElement('button');
+                                    // 메모리 게임에서는 카드의 캐릭터 이름을 정답으로 사용
+                                    const correctAnswer = question.cards[0].name;
+                                    dummyButton.dataset.answer = correctAnswer;
+                                    checkAnswer(dummyButton, correctAnswer);
+                                }, 1000);
+                            }
+                        } else {
+                            // 다른 경우 - 카드 다시 뒤집기
+                            lockBoard = true;
+                            setTimeout(() => {
+                                firstCard.classList.remove('flipped');
+                                secondCard.classList.remove('flipped');
+                                lockBoard = false;
+                            }, 1000);
+                        }
+                    }
+                });
+                
+                // 카드 구성 요소 추가
+                cardElement.appendChild(cardFront);
+                cardElement.appendChild(cardBack);
+                memoryGameContainer.appendChild(cardElement);
+            });
+            
+            // 메모리 게임에서는 선택지 버튼이 필요 없음
+            
+        } else {
+            // 알 수 없는 문제 유형일 경우 오류 메시지 표시
+            console.log('알 수 없는 문제 유형:', question.type);
+            imageContainer.innerHTML = `<div class="alert alert-danger">알 수 없는 문제 유형: ${question.type}</div>`;
+        }
         
         updateProgressBar();
         startElapsedTimer();
@@ -347,8 +487,30 @@
         scoreDisplay.textContent = score;
         showUnifiedStamp('시간초과 -10', false);
 
+        const question = questions[currentQuestionIndex];
+        
+        // 메모리 게임 타입인 경우 특별 처리
+        if (question.type === 'memory_game') {
+            // 메모리 게임에서 시간 초과시 모든 카드 보이기
+            const memoryCards = document.querySelectorAll('.memory-card');
+            memoryCards.forEach(card => {
+                card.classList.add('flipped');
+                card.classList.add('matched'); // 클릭 불가능하게 설정
+            });
+            
+            currentQuestionIndex++;
+            setTimeout(showNextQuestion, 2000);
+            return;
+        }
+        
+        // 일반 문제 타입 처리 (이미지 크롭 또는 마스킹된 텍스트)
         const allButtons = optionsContainer.querySelectorAll('button');
-        const correctAnswer = questions[currentQuestionIndex].answer;
+        
+        // 문제 타입에 따라 정답 처리
+        let correctAnswer = '';
+        if (question.options && question.options.length > 0) {
+            correctAnswer = question.options[0].name;
+        }
 
         allButtons.forEach(btn => {
             btn.disabled = true;
@@ -365,28 +527,40 @@
     function checkAnswer(selectedButton, correctAnswer) {
         clearInterval(timerInterval); // Stop the timer
 
+        const question = questions[currentQuestionIndex];
+        
+        // 메모리 게임 타입인 경우
+        if (question.type === 'memory_game') {
+            // 메모리 게임은 이미 맞춰서 완료한 경우이미로 무조건 정답 처리
+            score += 4;
+            correctAnswers++;
+            scoreDisplay.textContent = score;
+            showUnifiedStamp('메모리 게임 성공 +4', true);
+            
+            // 잠시 대기 후 다음 문제로 이동
+            setTimeout(() => {
+                currentQuestionIndex++;
+                showNextQuestion();
+            }, 1500);
+            
+            return;
+        }
+
         const allButtons = optionsContainer.querySelectorAll('button');
         const selectedAnswerName = selectedButton.dataset.answer;
-        const question = questions[currentQuestionIndex];
 
-        // 이미지가 부분적으로 보이는 문제였다면 전체 이미지 표시
-        if (question.type === 'partial_image' || (question.type === 'standard' && question.quiz_type === 'image_crop')) {
+        // 이미지 크롭 문제였다면 전체 이미지 표시
+        if (question.type === 'image_crop') {
             const characterImage = document.getElementById('character-image');
             const imageContainer = characterImage.closest('.image-container');
             
             // 준 클래스 제거
             imageContainer.classList.remove('zoomed');
             delete imageContainer.dataset.segment;
-            
-            // 문제 유형 표시 제거
-            const typeIndicator = imageContainer.querySelector('.text-center');
-            if (typeIndicator) {
-                typeIndicator.remove(); // 표시 요소 제거
-            }
         }
         
         // 텍스트 마스킹 문제였다면 원래 텍스트 보이기
-        if (question.type === 'standard' && question.quiz_type === 'masked_text') {
+        if (question.type === 'masked_text') {
             // 모든 버튼의 텍스트를 원래 텍스트로 복원
             allButtons.forEach((btn, idx) => {
                 const originalText = btn.dataset.answer;
