@@ -355,6 +355,7 @@ class Leaderboard(db.Model):
 # God Leaderboard Model
 class GodLeaderboard(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    country = db.Column(db.String(100), nullable=False, default='South Korea')
     school = db.Column(db.String(100), nullable=False)
     nickname = db.Column(db.String(100), nullable=False)
     score = db.Column(db.Integer, nullable=False)
@@ -362,7 +363,7 @@ class GodLeaderboard(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
     def __repr__(self):
-        return f"GodLeaderboard('{self.nickname}', '{self.score}')"
+        return f"GodLeaderboard('{self.country}', '{self.school}', '{self.nickname}', {self.score}, {self.time_taken})"
 
 
 @app.route('/divine_power')
@@ -388,10 +389,18 @@ def god_quiz():
     # 총 25개의 문제 생성 (10개는 이미지 크롭, 10개는 마스킹된 텍스트, 5개는 메모리 게임)
     questions = []
     
+    # 중복 방지를 위해 캐릭터 리스트 복사 (4지선다 문제용)
+    available_characters_for_quiz = all_characters.copy()
+    random.shuffle(available_characters_for_quiz)
+    
     # 이미지 크롭 문제 10개 생성
     for _ in range(10):
-        # 정답이 될 캐릭터 랜덤 선택
-        correct_character = random.choice(all_characters)
+        if not available_characters_for_quiz:  # 사용 가능한 캐릭터가 없으면 다시 채우기
+            available_characters_for_quiz = all_characters.copy()
+            random.shuffle(available_characters_for_quiz)
+        
+        # 정답이 될 캐릭터 선택 (중복 없이)
+        correct_character = available_characters_for_quiz.pop()
         
         # 오답이 될 캐릭터 3개 랜덤 선택 (정답 제외)
         other_characters = [c for c in all_characters if c.id != correct_character.id]
@@ -428,8 +437,12 @@ def god_quiz():
     
     # 마스킹된 텍스트 문제 10개 생성
     for _ in range(10):
-        # 정답이 될 캐릭터 랜덤 선택
-        correct_character = random.choice(all_characters)
+        if not available_characters_for_quiz:  # 사용 가능한 캐릭터가 없으면 다시 채우기
+            available_characters_for_quiz = all_characters.copy()
+            random.shuffle(available_characters_for_quiz)
+        
+        # 정답이 될 캐릭터 선택 (중복 없이)
+        correct_character = available_characters_for_quiz.pop()
         
         # 오답이 될 캐릭터 3개 랜덤 선택 (정답 제외)
         other_characters = [c for c in all_characters if c.id != correct_character.id]
@@ -545,7 +558,7 @@ def add_score():
 @app.route('/god_leaderboard')
 def god_leaderboard():
     leaderboard_entries = GodLeaderboard.query.order_by(GodLeaderboard.score.desc(), GodLeaderboard.time_taken).limit(100).all()
-    return render_template('god_leaderboard.html', leaderboard=leaderboard_entries)
+    return render_template('god_leaderboard.html', scores=leaderboard_entries)
 
 
 @app.route('/api/god_leaderboard/add', methods=['POST'])
@@ -555,7 +568,11 @@ def add_god_score():
     if not data or 'school' not in data or 'nickname' not in data or 'score' not in data or 'time_taken' not in data:
         return jsonify({'error': '필수 필드가 누락되었습니다.'}), 400
     
+    # country 필드가 없으면 기본값 'South Korea' 사용
+    country = data.get('country', 'South Korea')
+    
     new_score = GodLeaderboard(
+        country=country,
         school=data['school'],
         nickname=data['nickname'],
         score=data['score'],

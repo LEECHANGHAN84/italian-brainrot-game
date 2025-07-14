@@ -185,17 +185,83 @@
     .image-container.zoomed[data-segment="2"] #character-image { transform-origin: bottom left; }
     .image-container.zoomed[data-segment="3"] #character-image { transform-origin: bottom right; }
 </style>
+    <!-- 사용자 정보 입력 폼 -->
+<div id="user-info-form" class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-danger text-white text-center py-3">
+                    <h3 class="mb-0"><i class="fas fa-dragon me-2"></i> 신 모드 도전</h3>
+                </div>
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <p class="lead">도전자 정보를 입력해주세요</p>
+                    </div>
+                    <form id="player-form" class="needs-validation" novalidate>
+                        <div class="mb-3">
+                            <label for="country-select" class="form-label">국가 <i class="fas fa-flag"></i></label>
+                            <select id="country-select" class="form-select" required>
+                                <option value="South Korea" selected data-flag="kr">대한민국 🇰🇷</option>
+                                <option value="Japan" data-flag="jp">일본 🇯🇵</option>
+                                <option value="China" data-flag="cn">중국 🇨🇳</option>
+                                <option value="United States" data-flag="us">미국 🇺🇸</option>
+                                <option value="United Kingdom" data-flag="gb">영국 🇬🇧</option>
+                                <option value="France" data-flag="fr">프랑스 🇫🇷</option>
+                                <option value="Germany" data-flag="de">독일 🇩🇪</option>
+                                <option value="Italy" data-flag="it">이탈리아 🇮🇹</option>
+                                <option value="Spain" data-flag="es">스페인 🇪🇸</option>
+                                <option value="Canada" data-flag="ca">캐나다 🇨🇦</option>
+                                <option value="Australia" data-flag="au">호주 🇦🇺</option>
+                                <option value="Brazil" data-flag="br">브라질 🇧🇷</option>
+                                <option value="Russia" data-flag="ru">러시아 🇷🇺</option>
+                                <option value="India" data-flag="in">인도 🇮🇳</option>
+                            </select>
+                            <div class="invalid-feedback">국가를 선택해주세요.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="affiliation-input" class="form-label">소속 <i class="fas fa-university"></i></label>
+                            <input type="text" id="affiliation-input" class="form-control" placeholder="학교/회사/단체명" required>
+                            <div class="invalid-feedback">소속을 입력해주세요.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="nickname-input" class="form-label">닉네임 <i class="fas fa-user-tag"></i></label>
+                            <input type="text" id="nickname-input" class="form-control" placeholder="사용할 닉네임" required>
+                            <div class="invalid-feedback">닉네임을 입력해주세요.</div>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" id="start-quiz-btn" class="btn btn-danger btn-lg">
+                                <i class="fas fa-play-circle me-2"></i> 도전 시작
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 퀴즈 UI -->
+<div id="quiz-container" style="display: none;">
     {% call render_quiz_ui('신 모드', show_timer=False) %}
         <div id="options-container" class="row g-3 col-10 mx-auto">
             <!-- Buttons will be inserted here by JavaScript -->
         </div>
     {% endcall %}
+</div>
 {% endblock %}
 
 {% block scripts %}
 {{ stamp_system() }}
 <script>
     // --- DOM Elements ---
+    const userInfoForm = document.getElementById('user-info-form');
+    const quizContainer = document.getElementById('quiz-container');
+    const playerForm = document.getElementById('player-form');
+    const countrySelect = document.getElementById('country-select');
+    const affiliationInput = document.getElementById('affiliation-input');
+    const nicknameInput = document.getElementById('nickname-input');
+    const startQuizBtn = document.getElementById('start-quiz-btn');
+    
     const scoreDisplay = document.getElementById('score');
     const quizArea = document.getElementById('quiz-area');
     const loadingScreen = document.getElementById('loading-screen');
@@ -207,6 +273,7 @@
     const imageContainer = document.querySelector('.image-container');
     const progressBar = document.getElementById('progress-bar');
     const timerSlot = document.getElementById('timer-slot');
+    
     // --- Game State ---
     let score = 0;
     let questions = [];
@@ -214,6 +281,11 @@
     let correctAnswers = 0;
     let timerInterval = null; // Timer interval ID
     let startTime = null; // 퀴즈 시작 시간
+    
+    // --- 사용자 정보 ---
+    let playerCountry = 'South Korea';
+    let playerAffiliation = '';
+    let playerNickname = '';
 
     // --- Core Functions ---
     function createTimerUI() {
@@ -229,6 +301,30 @@
         timerSlot.appendChild(timerContainer);
     }
 
+    // 폼 제출 이벤트 핸들러 등록
+    document.addEventListener('DOMContentLoaded', function() {
+        playerForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // 폼 유효성 검사
+            if (!playerForm.checkValidity()) {
+                e.stopPropagation();
+                playerForm.classList.add('was-validated');
+                return;
+            }
+            
+            // 사용자 정보 저장
+            playerCountry = countrySelect.value;
+            playerAffiliation = affiliationInput.value.trim();
+            playerNickname = nicknameInput.value.trim();
+            
+            // 폼 숨기고 퀴즈 시작
+            userInfoForm.style.display = 'none';
+            quizContainer.style.display = 'block';
+            startQuiz();
+        });
+    });
+    
     async function startQuiz() {
         clearInterval(timerInterval);
         createTimerUI();
@@ -674,11 +770,44 @@
         correctAnswersDisplay.textContent = correctAnswers;
         totalQuestionsDisplay.textContent = questions.length;
         
+        // 점수 저장 API 호출
+        const endTime = new Date();
+        const timeTaken = (endTime - startTime) / 1000; // 초 단위로 변환
+        
+        // 점수 저장 API 호출
+        fetch('/api/god_leaderboard/add', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                country: playerCountry,
+                school: playerAffiliation,
+                nickname: playerNickname,
+                score: score,
+                time_taken: timeTaken
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('점수 저장 성공:', data);
+        })
+        .catch(error => {
+            console.error('점수 저장 오류:', error);
+        });
+        
         const endButtons = document.getElementById('end-buttons');
         endButtons.innerHTML = '';
 
+        // 레더보드 버튼 추가
+        const leaderboardBtn = document.createElement('a');
+        leaderboardBtn.href = "{{ url_for('god_leaderboard') }}";
+        leaderboardBtn.className = 'btn btn-danger btn-lg me-3';
+        leaderboardBtn.innerHTML = '<i class="fas fa-trophy me-2"></i> 명예의 전당';
+        endButtons.appendChild(leaderboardBtn);
+
         const restartBtn = document.createElement('a');
-        restartBtn.href = "{{ url_for('god_mode') }}"; // 다시하기 링크 수정
+        restartBtn.href = "{{ url_for('god_mode') }}";
         restartBtn.className = 'btn btn-primary btn-lg me-3';
         restartBtn.innerHTML = '<i class="fas fa-redo me-2"></i> 다시하기';
         endButtons.appendChild(restartBtn);
