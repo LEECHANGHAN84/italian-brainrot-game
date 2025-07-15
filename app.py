@@ -617,6 +617,39 @@ def ultra_god_quiz():
         # 선택지 섭기
         random.shuffle(options)
         
+        # 캐릭터 이름 마스킹 처리
+        character_name = correct_character.name_ko
+        masked_text = character_name
+        
+        # 띄어쓰기를 제외한 실제 글자 수 계산
+        actual_char_count = sum(1 for c in character_name if c != ' ')
+        
+        # 띄어쓰기를 제외한 글자 위치 찾기
+        char_positions = [i for i, c in enumerate(character_name) if c != ' ']
+        
+        # 글자 수에 따라 다른 마스킹 처리 적용
+        if actual_char_count <= 6:
+            # 6글자 이하: 실제 글자 수의 절반을 표시 (소수점 이하 버림)
+            visible_count = actual_char_count // 2
+        else:
+            # 7글자 이상: 랜덤으로 4글자만 표시
+            visible_count = min(4, actual_char_count)
+        
+        # 보여줄 글자의 위치를 랜덤으로 선택
+        selected_indices = random.sample(char_positions, visible_count)
+        
+        # 마스킹된 텍스트 생성
+        masked_chars = []
+        for i in range(len(character_name)):
+            if i in selected_indices:
+                masked_chars.append(character_name[i])  # 원래 글자 표시
+            elif character_name[i] == ' ':
+                masked_chars.append(' ')  # 띄어쓰기는 그대로 유지
+            else:
+                masked_chars.append('O')  # O로 마스킹
+        
+        masked_text = ''.join(masked_chars)
+        
         # 문제 생성
         question = {
             'id': len(questions) + 1,
@@ -624,6 +657,7 @@ def ultra_god_quiz():
             'character_id': correct_character.id,
             'image': correct_character.image_file,
             'correct_answer': correct_character.name_ko,  # 정답 캐릭터 이름 명시적 전달
+            'text': masked_text,  # 마스킹된 텍스트 추가
             'options': options
         }
         
@@ -756,6 +790,39 @@ def ultra_god_quiz():
         # 선택지 섞기
         random.shuffle(options)
         
+        # 캐릭터 이름 마스킹 처리
+        character_name = correct_character.name_ko
+        masked_text = character_name
+        
+        # 띄어쓰기를 제외한 실제 글자 수 계산
+        actual_char_count = sum(1 for c in character_name if c != ' ')
+        
+        # 띄어쓰기를 제외한 글자 위치 찾기
+        char_positions = [i for i, c in enumerate(character_name) if c != ' ']
+        
+        # 글자 수에 따라 다른 마스킹 처리 적용
+        if actual_char_count <= 6:
+            # 6글자 이하: 실제 글자 수의 절반을 표시 (소수점 이하 버림)
+            visible_count = actual_char_count // 2
+        else:
+            # 7글자 이상: 랜덤으로 4글자만 표시
+            visible_count = min(4, actual_char_count)
+        
+        # 보여줄 글자의 위치를 랜덤으로 선택
+        selected_indices = random.sample(char_positions, visible_count)
+        
+        # 마스킹된 텍스트 생성
+        masked_chars = []
+        for i in range(len(character_name)):
+            if i in selected_indices:
+                masked_chars.append(character_name[i])  # 원래 글자 표시
+            elif character_name[i] == ' ':
+                masked_chars.append(' ')  # 띄어쓰기는 그대로 유지
+            else:
+                masked_chars.append('O')  # O로 마스킹
+        
+        masked_text = ''.join(masked_chars)
+        
         # 문제 생성
         question = {
             'id': len(questions) + 1,
@@ -763,6 +830,7 @@ def ultra_god_quiz():
             'character_id': correct_character.id,
             'image': correct_character.image_file,
             'correct_answer': correct_character.name_ko,  # 정답 캐릭터 이름 명시적 전달
+            'text': masked_text,  # 마스킹된 텍스트 추가
             'options': options
         }
         
