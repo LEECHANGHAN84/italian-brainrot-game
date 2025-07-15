@@ -344,7 +344,7 @@
     
     /* 이미지 줌 효과를 위한 CSS */
     .image-container.zoomed #character-image {
-        transform: scale(2);
+        transform: scale(4);
     }
     .image-container.zoomed[data-segment="0"] #character-image { transform-origin: top left; }
     .image-container.zoomed[data-segment="1"] #character-image { transform-origin: top right; }
@@ -607,9 +607,17 @@
                 button.className = 'btn btn-lg btn-primary';
                 
                 // 텍스트 마스킹 적용
-                const displayText = maskText(option.name);
-                button.dataset.maskedText = displayText;
+                let displayText;
                 
+                // 정답 옵션이고 백엔드에서 마스킹된 텍스트가 전달되었다면 그것을 사용
+                if (option.name === question.correct_answer && question.text) {
+                    displayText = question.text; // 백엔드에서 전달한 마스킹된 텍스트 사용
+                } else {
+                    // 오답 옵션은 기존 마스킹 함수 사용
+                    displayText = maskText(option.name);
+                }
+                
+                button.dataset.maskedText = displayText;
                 button.textContent = `${index + 1}. ${displayText}`;
                 button.dataset.answer = option.name; // 정답 비교를 위해 데이터 속성 추가
                 button.onclick = () => checkAnswer(button, question.correct_answer); // 명시적으로 전달받은 정답 사용
