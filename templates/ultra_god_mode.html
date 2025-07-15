@@ -6,6 +6,170 @@
 
 {% block content %}
 <style>
+    /* 초신 모드 색상 변수 */
+    :root {
+        --ultra-god-primary: #e83e8c;
+        --ultra-god-secondary: #fd7e14;
+        --ultra-god-accent: #ff6b6b;
+        --ultra-god-light: #fff1f5;
+        --ultra-god-dark: #8c1341;
+    }
+    
+    /* 배경 패턴 스타일 */
+    .background-pattern {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23e83e8c' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        z-index: -1;
+        opacity: 0.8;
+    }
+    
+    /* 모드 아이콘 스타일 */
+    .mode-icon {
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, var(--ultra-god-primary), var(--ultra-god-secondary));
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 15px;
+        box-shadow: 0 10px 20px rgba(232, 62, 140, 0.3);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .mode-icon::before {
+        content: '';
+        position: absolute;
+        top: -10px;
+        left: -10px;
+        right: -10px;
+        bottom: -10px;
+        background: linear-gradient(45deg, var(--ultra-god-primary), transparent, var(--ultra-god-secondary));
+        animation: spin 3s linear infinite;
+        opacity: 0.7;
+    }
+    
+    .mode-icon i {
+        font-size: 28px;
+        color: white;
+        position: relative;
+        z-index: 2;
+        text-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    /* 다크 모드 스타일 */
+    @media (prefers-color-scheme: dark) {
+        .background-pattern {
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23e83e8c' fill-opacity='0.15'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            opacity: 0.2;
+        }
+        
+        .user-info-card {
+            background: linear-gradient(145deg, rgba(140, 19, 65, 0.3), rgba(0, 0, 0, 0.5));
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        }
+        
+        .user-info-card .card-body {
+            background-color: rgba(33, 37, 41, 0.7);
+        }
+        
+        .form-label {
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .form-control, .form-select {
+            background-color: rgba(33, 37, 41, 0.8);
+            border-color: rgba(232, 62, 140, 0.4);
+            color: white;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            background-color: rgba(33, 37, 41, 0.9);
+            color: white;
+        }
+        
+        .form-control::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+    }
+    
+    /* 폰트 스타일 */
+    body {
+        font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
+    }
+    
+    /* 도전 페이지 스타일 */
+    .user-info-card {
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(232, 62, 140, 0.1);
+        background: linear-gradient(145deg, var(--ultra-god-light), #ffffff);
+        overflow: hidden;
+    }
+    
+    .user-info-card .card-header {
+        background: linear-gradient(135deg, var(--ultra-god-primary), var(--ultra-god-secondary));
+        color: white;
+        border: none;
+        padding: 1.5rem;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    
+    .user-info-card .card-body {
+        padding: 2rem;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: var(--ultra-god-dark);
+        margin-bottom: 0.5rem;
+        font-size: 0.95rem;
+        letter-spacing: 0.3px;
+    }
+    
+    .form-control, .form-select {
+        border-radius: 10px;
+        border: 2px solid rgba(232, 62, 140, 0.2);
+        padding: 0.75rem 1rem;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        box-shadow: none;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: var(--ultra-god-primary);
+        box-shadow: 0 0 0 0.25rem rgba(232, 62, 140, 0.25);
+    }
+    
+    #start-quiz-btn {
+        background: linear-gradient(135deg, var(--ultra-god-primary), var(--ultra-god-secondary));
+        border: none;
+        padding: 1rem;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        border-radius: 10px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(232, 62, 140, 0.3);
+    }
+    
+    #start-quiz-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(232, 62, 140, 0.4);
+        background: linear-gradient(135deg, var(--ultra-god-accent), var(--ultra-god-primary));
+    }
+    
     /* 타이머 스타일 */
     .timer-container {
         display: flex;
@@ -14,6 +178,7 @@
         justify-content: center;
         margin-bottom: 1rem;
     }
+    
     #timer-bar-container {
         width: 200px;
         height: 15px;
@@ -21,18 +186,19 @@
         border-radius: 8px;
         overflow: hidden;
     }
+    
     #timer-bar {
         height: 100%;
         width: 100%;
-        background-color: #17a2b8; /* info color */
+        background-color: var(--ultra-god-primary);
         transition: width 1s linear;
     }
+    
     /* 경과 시간 스타일 */
     #elapsed-timer {
-        font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
         font-weight: 600;
         font-size: 1.1rem;
-        background: linear-gradient(45deg, #5f27cd, #ff6b6b);
+        background: linear-gradient(45deg, var(--ultra-god-primary), var(--ultra-god-secondary));
         -webkit-background-clip: text;
         background-clip: text;
         color: transparent;
@@ -185,13 +351,19 @@
     .image-container.zoomed[data-segment="2"] #character-image { transform-origin: bottom left; }
     .image-container.zoomed[data-segment="3"] #character-image { transform-origin: bottom right; }
 </style>
-    <!-- 사용자 정보 입력 폼 -->
-<div id="user-info-form" class="container py-4">
+    <!-- 사용자 정보 입력 화면 -->
+<div id="user-info-form" class="container py-5 ultra-god-mode-container">
+    <!-- 배경 패턴 -->
+    <div class="background-pattern"></div>
+    
     <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow-lg border-0">
-                <div class="card-header bg-primary text-white text-center py-3">
-                    <h3 class="mb-0"><i class="fas fa-crown me-2"></i> 초신 모드 도전</h3>
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow user-info-card">
+                <div class="card-header text-center py-4">
+                    <div class="mode-icon">
+                        <i class="fas fa-fire"></i>
+                    </div>
+                    <h3 class="mb-0">초신 모드 도전</h3>
                 </div>
                 <div class="card-body p-4">
                     <div class="text-center mb-4">
@@ -233,7 +405,7 @@
                             <div class="invalid-feedback">닉네임을 입력해주세요.</div>
                         </div>
                         <div class="d-grid gap-2">
-                            <button type="submit" id="start-quiz-btn" class="btn btn-primary btn-lg">
+                            <button type="submit" id="start-quiz-btn" class="btn btn-danger btn-lg">
                                 <i class="fas fa-play-circle me-2"></i> 도전 시작
                             </button>
                         </div>

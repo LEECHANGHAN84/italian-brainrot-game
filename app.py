@@ -404,12 +404,131 @@ def god_quiz():
     # 모든 캐릭터 가져오기
     all_characters = Character.query.all()
     
+    if len(all_characters) < 4:
+        return jsonify({'error': '퀴즈를 만들려면 최소 4명의 캐릭터가 필요합니다.'}), 404
+    
     # 총 25개의 문제 생성 (10개는 이미지 크롭, 10개는 마스킹된 텍스트, 5개는 메모리 게임)
     questions = []
     
     # 중복 방지를 위해 캐릭터 리스트 복사 (4지선다 문제용)
     available_characters_for_quiz = all_characters.copy()
     random.shuffle(available_characters_for_quiz)
+    
+    # 이미지 크롭 문제 10개 생성
+    for _ in range(10):
+        if not available_characters_for_quiz:  # 사용 가능한 캐릭터가 없으면 다시 채우기
+            available_characters_for_quiz = all_characters.copy()
+            random.shuffle(available_characters_for_quiz)
+        
+        # 정답이 될 캐릭터 선택 (중복 없이)
+        correct_character = available_characters_for_quiz.pop()
+        
+        # 오답이 될 캐릭터 3개 랜덤 선택 (정답 제외)
+        other_characters = [c for c in all_characters if c.id != correct_character.id]
+        wrong_characters = random.sample(other_characters, 3)
+        
+        # 모든 선택지 (정답 1개 + 오답 3개)
+        options = [{
+            'id': correct_character.id,
+            'name': correct_character.name_ko,
+            'image': correct_character.image_file
+        }]
+        
+        for wrong in wrong_characters:
+            options.append({
+                'id': wrong.id,
+                'name': wrong.name_ko,
+                'image': wrong.image_file
+            })
+        
+        # 선택지 섞기
+        random.shuffle(options)
+        
+        # 이미지 크롭을 위한 랜덤 세그먼트 선택 (0: 좌상, 1: 우상, 2: 좌하, 3: 우하)
+        segment = random.randint(0, 3)
+        
+        # 문제 추가
+        questions.append({
+            'type': 'image_crop',
+            'image': correct_character.image_file,
+            'segment': segment,
+            'options': options,
+            'correct_answer': correct_character.name_ko  # 명시적으로 정답 추가
+        })
+    
+    # 마스킹된 텍스트 문제 10개 생성
+    for _ in range(10):
+        if not available_characters_for_quiz:  # 사용 가능한 캐릭터가 없으면 다시 채우기
+            available_characters_for_quiz = all_characters.copy()
+            random.shuffle(available_characters_for_quiz)
+        
+        # 정답이 될 캐릭터 선택 (중복 없이)
+        correct_character = available_characters_for_quiz.pop()
+        
+        # 오답이 될 캐릭터 3개 랜덤 선택 (정답 제외)
+        other_characters = [c for c in all_characters if c.id != correct_character.id]
+        wrong_characters = random.sample(other_characters, 3)
+        
+        # 모든 선택지 (정답 1개 + 오답 3개)
+        options = [{
+            'id': correct_character.id,
+            'name': correct_character.name_ko,
+            'image': correct_character.image_file
+        }]
+        
+        for wrong in wrong_characters:
+            options.append({
+                'id': wrong.id,
+                'name': wrong.name_ko,
+                'image': wrong.image_file
+            })
+        
+        # 선택지 섞기
+        random.shuffle(options)
+        
+        # 문제 추가 (마스킹된 텍스트)
+        questions.append({
+            'type': 'masked_text',
+            'text': correct_character.name_ko,
+            'image': correct_character.image_file,
+            'options': options,
+            'correct_answer': correct_character.name_ko  # 명시적으로 정답 추가
+        })
+    
+    # 메모리 게임 문제 5개 생성
+    for _ in range(5):
+        if len(available_characters_for_quiz) < 2:  # 메모리 게임은 2개의 캐릭터가 필요
+            available_characters_for_quiz = all_characters.copy()
+            random.shuffle(available_characters_for_quiz)
+        
+        # 2개의 서로 다른 캐릭터 선택
+        memory_characters = [available_characters_for_quiz.pop() for _ in range(2)]
+        
+        # 카드 생성 (각 캐릭터마다 2장씩)
+        cards = []
+        for idx, char in enumerate(memory_characters):
+            for _ in range(2):  # 각 캐릭터당 2장의 카드
+                cards.append({
+                    'id': f"{char.id}_{_}",  # 고유 ID
+                    'pair_id': char.id,  # 매칭용 ID
+                    'image': char.image_file,
+                    'name': char.name_ko
+                })
+        
+        # 카드 섞기
+        random.shuffle(cards)
+        
+        # 문제 추가 (메모리 게임)
+        questions.append({
+            'type': 'memory_game',
+            'cards': cards,
+            'correct_answer': 'memory_match'  # 메모리 게임은 매칭 성공이 정답
+        })
+    
+    # 모든 문제 섞기
+    random.shuffle(questions)
+    
+    return jsonify(questions)
     
 @app.route('/api/quiz/ultra_god')
 def ultra_god_quiz():
