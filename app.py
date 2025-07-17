@@ -665,12 +665,13 @@ def ultra_god_quiz():
     
     # 메모리 게임 문제 5개 생성
     for _ in range(5):
-        # 서로 다른 캐릭터 2개 랜덤 선택
-        selected_characters = random.sample(all_characters, 2)
+        # 서로 다른 캐릭터 3개 랜덤 선택
+        selected_characters = random.sample(all_characters, 3)
         character1 = selected_characters[0]
         character2 = selected_characters[1]
+        character3 = selected_characters[2]
         
-        # 메모리 게임은 2개의 서로 다른 캐릭터 이미지를 각각 2장씩 사용
+        # 메모리 게임은 3개의 서로 다른 캐릭터 이미지를 각각 2장씩 사용 (총 6장)
         cards = [{
             'id': f"{character1.id}_1",
             'character_id': character1.id,
@@ -695,6 +696,18 @@ def ultra_god_quiz():
             'name': character2.name_ko,
             'image': character2.image_file,
             'pair_id': 2  # 같은 페어 식별자
+        }, {
+            'id': f"{character3.id}_1",
+            'character_id': character3.id,
+            'name': character3.name_ko,
+            'image': character3.image_file,
+            'pair_id': 3  # 세 번째 페어 식별자
+        }, {
+            'id': f"{character3.id}_2",
+            'character_id': character3.id,
+            'name': character3.name_ko,
+            'image': character3.image_file,
+            'pair_id': 3  # 같은 페어 식별자
         }]
         
         # 카드 섭기
@@ -838,12 +851,13 @@ def ultra_god_quiz():
     
     # 메모리 게임 문제 5개 생성
     for _ in range(5):
-        # 서로 다른 캐릭터 2개 랜덤 선택
-        selected_characters = random.sample(all_characters, 2)
+        # 서로 다른 캐릭터 3개 랜덤 선택
+        selected_characters = random.sample(all_characters, 3)
         character1 = selected_characters[0]
         character2 = selected_characters[1]
+        character3 = selected_characters[2]
         
-        # 메모리 게임은 2개의 서로 다른 캐릭터 이미지를 각각 2장씩 사용
+        # 메모리 게임은 3개의 서로 다른 캐릭터 이미지를 각각 2장씩 사용 (총 6장)
         cards = [{
             'id': f"{character1.id}_1",
             'character_id': character1.id,
@@ -868,6 +882,18 @@ def ultra_god_quiz():
             'name': character2.name_ko,
             'image': character2.image_file,
             'pair_id': 2  # 같은 페어 식별자
+        }, {
+            'id': f"{character3.id}_1",
+            'character_id': character3.id,
+            'name': character3.name_ko,
+            'image': character3.image_file,
+            'pair_id': 3  # 세 번째 페어 식별자
+        }, {
+            'id': f"{character3.id}_2",
+            'character_id': character3.id,
+            'name': character3.name_ko,
+            'image': character3.image_file,
+            'pair_id': 3  # 같은 페어 식별자
         }]
         
         # 카드 섞기
