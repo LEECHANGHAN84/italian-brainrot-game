@@ -21,6 +21,18 @@
         transition: all 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28);
         box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
         backdrop-filter: blur(5px);
+        text-align: center;
+    }
+    
+    /* 시간초과 스탬프 스타일 */
+    .timeout-text {
+        display: inline-block;
+        vertical-align: middle;
+    }
+    
+    .timeout-text div {
+        line-height: 0.9;
+        font-size: 70%; /* 30% 축소 */
     }
 
     .stamp.show {
@@ -71,7 +83,15 @@
 
         // 이모지 추가
         const emoji = isCorrect ? '✓ ' : '✗ ';
-        stamp.textContent = emoji + text;
+        
+        // 시간초과 스탬프는 '시간'과 '초과'만 2줄로 표시
+        if (text.includes('시간초과')) {
+            const parts = text.split(' ');
+            stamp.innerHTML = `${emoji}<span class="timeout-text"><div>시간</div><div>초과</div></span> ${parts[1]}`;
+        } else {
+            stamp.textContent = emoji + text;
+        }
+        
         stamp.className = 'stamp show';
 
         if (isCorrect) {
