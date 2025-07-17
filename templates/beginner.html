@@ -5,7 +5,7 @@
 
 {% block content %}
 {% call render_quiz_ui('초보 모드', show_timer=False) %}
-    <div id="options-container" class="d-grid gap-2 col-8 mx-auto">
+    <div id="options-container" class="d-grid gap-2 col-12 mx-auto">
         <!-- Option buttons will be inserted here by JS -->
     </div>
 {% endcall %}
@@ -13,6 +13,7 @@
 <div id="message-container" class="text-center my-4" style="height: 50px; display: none;"></div>
 
 {% endblock %}
+
 
 {% block scripts %}
 <script>
@@ -104,6 +105,9 @@
             button.onclick = () => checkAnswer(button, question.answer);
             optionsContainer.appendChild(button);
         });
+        
+        // Adjust font size for buttons after creation
+        setTimeout(adjustFontSizeForButtons, 10);
     }
 
     function checkAnswer(selectedButton, correctAnswer) {
@@ -178,6 +182,63 @@
         mainMenuBtn.innerHTML = '<i class="fas fa-home me-2"></i> 메인 메뉴로';
         endButtons.appendChild(mainMenuBtn);
     }
+
+    function adjustFontSizeForButtons() {
+        const optionsContainer = document.getElementById('options-container');
+        if (!optionsContainer) return;
+        
+        const buttons = optionsContainer.querySelectorAll('.btn');
+        
+        buttons.forEach(button => {
+            // 원래 폰트 크기로 초기화
+            button.style.fontSize = '';
+            button.style.whiteSpace = 'normal';
+            button.style.overflow = 'visible';
+            button.style.textOverflow = 'clip';
+            
+            // 텍스트 길이에 따라 폰트 크기 조절
+            const textLength = button.textContent.length;
+            
+            // 모바일 화면인지 확인
+            const isMobile = window.innerWidth <= 767;
+            
+            // 기본 폰트 크기 (rem 단위)
+            let baseFontSize = isMobile ? 1.035 : 1.15;
+            let reductionFactor = 1.0;
+            
+            // 버튼 최대 너비 설정 (이미지 컨테이너 너비에 맞추기)
+            const imageContainer = document.querySelector('.image-container');
+            if (imageContainer) {
+                const containerWidth = imageContainer.offsetWidth;
+                button.style.maxWidth = `${containerWidth}px`;
+            }
+            
+            // 텍스트 길이에 따라 단계적 폰트 크기 조절 (띄워쓰기 포함 길이 기준)
+            if (textLength >= 21) {
+                // 21자 이상: 기존 폰트 크기의 70%로 설정
+                reductionFactor = 0.7;
+            } else if (textLength >= 16) {
+                // 16-20자: 기존 폰트 크기의 90%로 설정
+                reductionFactor = 0.9;
+            } else {
+                // 15자 이하: 기존 폰트 크기 그대로 유지
+                reductionFactor = 1.0;
+            }
+            
+            // 폰트 크기 적용
+            if (reductionFactor < 1.0) {
+                const newFontSize = baseFontSize * reductionFactor;
+                button.style.fontSize = `${newFontSize}rem`;
+            }
+            
+            // 줄바꿈 없이 한 줄로 표시
+            button.style.whiteSpace = 'normal';
+            button.style.wordBreak = 'keep-all';
+            button.style.wordWrap = 'break-word';
+        });
+    }
+
+    window.addEventListener('resize', adjustFontSizeForButtons);
 
     document.addEventListener('DOMContentLoaded', startQuiz);
 </script>
