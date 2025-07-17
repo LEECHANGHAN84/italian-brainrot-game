@@ -1003,4 +1003,6 @@ with app.app_context():
     db.create_all()
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # 0.0.0.0으로 설정하면 모든 네트워크 인터페이스에서 접근 가능
+    # 이렇게 하면 localhost(127.0.0.1)와 내부 IP(192.168.77.135) 모두에서 접근 가능
+    app.run(host='0.0.0.0', port=5000, debug=True)
