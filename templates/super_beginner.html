@@ -5,7 +5,7 @@
 
 {% block content %}
 {% call render_quiz_ui('초초보 모드', show_timer=False) %}
-    <div id="options-container" class="d-grid gap-2 col-8 mx-auto">
+    <div id="options-container" class="d-grid gap-2 col-12 mx-auto">
         <!-- Name button will be inserted here by JS -->
     </div>
 {% endcall %}
@@ -90,7 +90,68 @@
         nameButton.textContent = question.name;
         nameButton.onclick = () => checkAnswer();
         optionsContainer.appendChild(nameButton);
+
+        // 글자 수에 따라 폰트 크기 조절
+        setTimeout(() => {
+            adjustFontSizeForButtons();
+        }, 10);
     }
+    
+    // 글자 수에 따라 폰트 크기를 자동으로 조절하는 함수
+    function adjustFontSizeForButtons() {
+        const buttons = optionsContainer.querySelectorAll('.btn');
+        
+        buttons.forEach(button => {
+            // 원래 폰트 크기로 초기화
+            button.style.fontSize = '';
+            button.style.whiteSpace = 'normal';
+            button.style.overflow = 'visible';
+            button.style.textOverflow = 'clip';
+            
+            // 텍스트 길이에 따라 폰트 크기 조절
+            const textLength = button.textContent.length;
+            
+            // 모바일 화면인지 확인
+            const isMobile = window.innerWidth <= 767;
+            
+            // 기본 폰트 크기 (rem 단위)
+            let baseFontSize = isMobile ? 1.035 : 1.15;
+            let reductionFactor = 1.0;
+            
+            // 버튼 최대 너비 설정 (이미지 컨테이너 너비에 맞추기)
+            const imageContainer = document.querySelector('.image-container');
+            if (imageContainer) {
+                const containerWidth = imageContainer.offsetWidth;
+                button.style.maxWidth = `${containerWidth}px`;
+            }
+            
+            // 텍스트 길이에 따라 단계적 폰트 크기 조절 (띄워쓰기 포함 길이 기준)
+            if (textLength >= 21) {
+                // 21자 이상: 기존 폰트 크기의 70%로 설정
+                reductionFactor = 0.7;
+            } else if (textLength >= 16) {
+                // 16-20자: 기존 폰트 크기의 90%로 설정
+                reductionFactor = 0.9;
+            } else {
+                // 15자 이하: 기존 폰트 크기 그대로 유지
+                reductionFactor = 1.0;
+            }
+            
+            // 폰트 크기 적용
+            if (reductionFactor < 1.0) {
+                const newFontSize = baseFontSize * reductionFactor;
+                button.style.fontSize = `${newFontSize}rem`;
+            }
+            
+            // 줄바꿈 없이 한 줄로 표시
+            button.style.whiteSpace = 'normal';
+            button.style.wordBreak = 'keep-all';
+            button.style.wordWrap = 'break-word';
+        });
+    }
+    
+    // 창 크기가 변경될 때도 폰트 크기 재조정
+    window.addEventListener('resize', adjustFontSizeForButtons);
 
     function checkAnswer() {
         correctAnswers++;

@@ -20,8 +20,12 @@
     
     /* 헤더 스타일 */
     .quiz-header {
-        padding: 0.5rem 1rem;
-        margin-bottom: 0.5rem;
+        padding: 0.125rem 1rem; /* 상단 여백 50% 줄임 */
+        margin-bottom: 0.25rem; /* 하단 여백도 50% 줄임 */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.8rem;
     }
     
     .quiz-header .quiz-title {
@@ -35,6 +39,7 @@
         text-shadow: 2px 2px 5px rgba(0,0,0,0.15);
         position: relative;
         display: inline-block;
+        order: 0; /* 기본 순서 */
     }
     
     .quiz-header .quiz-title::after {
@@ -51,9 +56,8 @@
     
     .quiz-header .score-box {
         font-family: 'Jua', sans-serif;
-        font-size: 1.8rem;
+        font-size: 1.5rem; /* 메인메뉴 버튼과 동일한 폰트 사이즈로 변경 */
         color: #5f27cd;
-        min-width: 140px;
         text-align: center;
         background: linear-gradient(135deg, rgba(255,255,255,0.6), rgba(255,255,255,0.2));
         padding: 0.6rem 1.2rem;
@@ -62,6 +66,12 @@
         backdrop-filter: blur(5px);
         border: 1px solid rgba(255,255,255,0.2);
         transition: all 0.3s ease;
+        order: 2; /* 기본 순서 */
+        display: flex; /* 내용 중앙 정렬을 위해 */
+        align-items: center; /* 세로 중앙 정렬 */
+        justify-content: center; /* 가로 중앙 정렬 */
+        width: 208px; /* 고정 너비 설정 - 기존 160px에서 30% 증가 */
+        height: 60px; /* 고정 높이 설정 - 메인메뉴 버튼과 동일 */
     }
     
     .quiz-header .score-box:hover {
@@ -84,6 +94,10 @@
         text-decoration: none;
         display: inline-flex; /* 아이콘과 텍스트 정렬 */
         align-items: center;
+        justify-content: center; /* 가운데 정렬 */
+        order: 1; /* 기본 순서 */
+        width: 208px; /* 고정 너비 설정 - 기존 160px에서 30% 증가 */
+        height: 60px; /* 고정 높이 설정 */
     }
 
     .main-menu-button:hover {
@@ -91,6 +105,43 @@
         box-shadow: 0 8px 20px rgba(0,0,0,0.15);
         color: #341f97;
         text-decoration: none;
+    }
+    
+    /* 버튼 컨테이너 추가 - 메인메뉴와 점수박스를 가로로 배치 */
+    .quiz-header .buttons-container {
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        align-items: center;
+        gap: 1rem;
+        width: 100%;
+        margin-top: 0.5rem;
+    }
+    
+    /* 모바일 화면 대응 미디어 쿼리 */
+    @media (max-width: 767px) {
+        .quiz-header .quiz-title {
+            margin-bottom: 0.3rem;
+            font-size: 2.2rem; /* 모바일에서 제목 폰트 크기 감소 */
+        }
+        
+        .main-menu-button {
+            font-size: 1.05rem; /* 30% 작게 */
+            padding: 0.42rem 0.84rem; /* 30% 작게 */
+            width: 146px; /* 30% 작게 (208px의 70%) */
+            height: 42px; /* 30% 작게 (60px의 70%) */
+        }
+        
+        .quiz-header .score-box {
+            font-size: 1.05rem; /* 메인메뉴 버튼과 동일하게 */
+            padding: 0.42rem 0.84rem; /* 30% 작게 */
+            width: 146px; /* 30% 작게 (208px의 70%) */
+            height: 42px; /* 30% 작게 (60px의 70%) */
+        }
+        
+        .main-menu-button i {
+            font-size: 0.9em; /* 아이콘도 비례해서 작게 */
+        }
     }
     
     /* 퀴즈 컨텐츠 박스 */
@@ -113,12 +164,19 @@
     .image-container {
         width: 100%;
         max-width: 45vh; /* 최대 너비를 뷰포트 높이의 45%로 제한 */
-        margin: 1rem auto; /* 중앙 정렬 */
+        margin: 0.5rem auto; /* 위아래 여백 50% 줄임 */
         aspect-ratio: 1 / 1; /* 항상 1:1 비율 유지 */
         overflow: hidden; /* 넘치는 부분 숨김 */
         border-radius: 18px;
         box-shadow: 0 10px 25px rgba(0,0,0,0.2);
         position: relative; /* 내부 이미지 위치 기준 */
+    }
+    
+    /* 모바일용 이미지 컨테이너 크기 조정 */
+    @media (max-width: 767px) {
+        .image-container {
+            max-width: 36vh; /* 모바일에서는 최대 너비를 20% 줄임 (45vh의 80%) */
+        }
     }
 
     #character-image {
@@ -169,7 +227,8 @@
         font-family: 'Pretendard', 'Jua', sans-serif;
         font-size: 1.15rem;
         font-weight: 600;
-        padding: 0.85rem 1.8rem;
+        padding: 0.476rem 0.8rem; /* 버튼 높이를 모바일 버전과 동일하게 고정 */
+        height: 2.5rem; /* 버튼 높이 고정 */
         border-radius: 16px;
         transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         box-shadow: 0 6px 12px rgba(0,0,0,0.1);
@@ -177,6 +236,12 @@
         overflow: hidden;
         border: none;
         letter-spacing: -0.3px;
+        width: 100%; /* 기본 너비 100% */
+        max-width: 45vh; /* 최대 너비를 이미지 컨테이너와 동일하게 */
+        margin: 0 auto; /* 가운데 정렬 */
+        white-space: normal; /* 긴 텍스트는 줄바꿈 허용 */
+        word-wrap: break-word; /* 단어 중간에도 줄바꿈 허용 */
+        text-align: center; /* 텍스트 가운데 정렬 */
     }
     
     #options-container .btn:hover, .input-group .btn:hover, #end-buttons .btn:hover {
@@ -186,6 +251,17 @@
     
     #options-container .btn:active, .input-group .btn:active, #end-buttons .btn:active {
         transform: translateY(1px);
+    }
+    
+    /* 모바일 화면에서 옵션 버튼 크기 조정 */
+    @media (max-width: 767px) {
+        #options-container .btn, .input-group .btn, #end-buttons .btn {
+            font-size: 1.035rem; /* 기존 1.15rem에서 10% 줄임 */
+            padding: 0.476rem 0.6rem; /* 좌우 패딩 조절 */
+            width: 100%; /* 기본 너비 100% */
+            max-width: 36vh; /* 최대 너비를 이미지 컨테이너와 동일하게 */
+            height: 2.5rem; /* 버튼 높이 고정 */
+        }
     }
     
     #options-container .btn::before, .input-group .btn::before, #end-buttons .btn::before {
@@ -271,7 +347,7 @@
     }
 </style>
 
-<div class="container mt-5">
+<div class="container mt-3">
     <!-- Loading Screen -->
     <div id="loading-screen" class="text-center">
         <h2 class="mb-4" style="font-family: 'Pretendard', 'Jua', sans-serif; font-weight: 600;">퀴즈를 불러오는 중<span class="loading-dots">...</span></h2>
@@ -290,16 +366,19 @@
     <div id="quiz-area" class="text-center quiz-container-modern" style="display: none;">
         
         <!-- Header: Title and Score -->
-        <div class="d-flex justify-content-between align-items-center mb-4 quiz-header">
-            <a href="{{ url_for('index') }}" class="main-menu-button"><i class="fas fa-arrow-left me-2"></i> 메인메뉴</a>
+        <div class="quiz-header mb-2">
             <h1 class="quiz-title mb-0">{{ mode_title }}</h1>
-            <div class="score-box">
-                현재 점수: <span id="score">0</span>
+            <!-- 버튼 컨테이너 - 메인메뉴와 점수박스를 가로로 배치 -->
+            <div class="buttons-container" style="display: flex; flex-direction: row; gap: 1rem;">
+                <a href="{{ url_for('index') }}" class="main-menu-button"><i class="fas fa-arrow-left me-2"></i> 메인메뉴</a>
+                <div class="score-box">
+                    현재 점수: <span id="score">0</span>
+                </div>
             </div>
         </div>
 
         <!-- Timer and Progress Info Row -->
-        <div class="d-flex justify-content-center align-items-center flex-wrap gap-3 mb-4">
+        <div class="d-flex justify-content-center align-items-center flex-wrap gap-3 mb-2">
             <!-- Timer (Optional) -->
             {% if show_timer %}
             <div class="timer-container">
@@ -332,7 +411,7 @@
         {{ stamp_system() }}
         
         <!-- Box containing image and options -->
-        <div class="quiz-content-box my-4">
+        <div class="quiz-content-box my-2">
             <!-- Image Container -->
             <div class="image-container">
                 <img id="character-image" src="" alt="캐릭터 이미지">
