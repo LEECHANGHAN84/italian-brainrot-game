@@ -36,6 +36,35 @@
     .image-container.zoomed[data-segment="1"] #character-image { transform-origin: top right; }
     .image-container.zoomed[data-segment="2"] #character-image { transform-origin: bottom left; }
     .image-container.zoomed[data-segment="3"] #character-image { transform-origin: bottom right; }
+    
+    /* 타이머를 프로그레스 바 안에 표시하기 위한 스타일 */
+    .progress-timer {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: white;
+        font-weight: bold;
+        text-shadow: 1px 1px 1px rgba(0,0,0,0.3);
+        font-size: 0.8rem;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        z-index: 10;
+    }
+    
+    /* 프로그레스 바에 문제 진행도 표시하기 위한 스타일 */
+    .progress-indicator {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        font-weight: bold;
+        text-shadow: 1px 1px 1px rgba(0,0,0,0.3);
+        font-size: 0.8rem;
+        z-index: 10;
+    }
 </style>
     {% call render_quiz_ui('초고수 모드', show_timer=False) %}
         <div id="options-container" class="row g-3 col-10 mx-auto">
@@ -70,22 +99,38 @@
 
     // --- Core Functions ---
     function createTimerUI() {
-        if (document.getElementById('timer-container')) return;
-
+        // 타이머 슬롯 숨기기
+        if (timerSlot) timerSlot.style.display = 'none';
+        
+        // 프로그레스 바 찾기
+        const progressContainer = document.getElementById('progress-container');
+        if (!progressContainer) return;
+        
+        // 프로그레스 바에 타이머 추가
         const timerContainer = document.createElement('div');
         timerContainer.id = 'timer-container';
-        timerContainer.className = 'timer-container d-flex align-items-center';
+        timerContainer.className = 'progress-timer';
         timerContainer.innerHTML = `
-            <i class="fas fa-stopwatch me-2 text-danger"></i>
-            <div id="timer-bar-container" class="progress" style="width: 100px; height: 15px;">
-                <div id="timer-bar" class="progress-bar bg-danger" role="progressbar" style="width: 100%;"></div>
-            </div>
-            <span id="timer-seconds" class="fw-bold ms-2" style="min-width: 20px;">5</span>
+            <i class="fas fa-stopwatch" style="font-size: 0.7rem;"></i>
+            <span id="timer-seconds">5</span>
         `;
-        timerSlot.appendChild(timerContainer);
-
-        timerBar = document.getElementById('timer-bar');
+        
+        // 프로그레스 바 설정
+        progressContainer.style.position = 'relative';
+        
+        // 프로그레스 바에 타이머 추가
+        progressContainer.appendChild(timerContainer);
+        
+        // 프로그레스 바에 문제 진행도 표시기 추가
+        const progressIndicator = document.createElement('div');
+        progressIndicator.id = 'progress-indicator';
+        progressIndicator.className = 'progress-indicator';
+        progressIndicator.innerHTML = `<span id="current-question">1</span>/<span id="total-questions">0</span>`;
+        progressContainer.appendChild(progressIndicator);
+        
+        // 타이머 요소 참조 업데이트
         timerSeconds = document.getElementById('timer-seconds');
+        timerBar = document.getElementById('progress-bar'); // 프로그레스 바를 타이머 바로 사용
     }
 
     async function startQuiz() {
@@ -160,28 +205,24 @@
         let timeLeft = 5;
         const totalTime = 5;
         
-        timerBar.style.transition = 'none'; // Reset transition for instant change
-        timerBar.style.width = '100%';
-        timerBar.classList.remove('bg-warning');
-        timerBar.classList.add('bg-danger');
+        // 타이머 초기화
+        const timerContainer = document.getElementById('timer-container');
+        const timerIcon = timerContainer.querySelector('i');
         timerSeconds.textContent = timeLeft;
-
-        // Force reflow to apply the reset style immediately
-        void timerBar.offsetWidth;
-
-        // Re-enable transition for the countdown animation
-        timerBar.style.transition = 'width 1s linear';
-
+        
         timerInterval = setInterval(() => {
             timeLeft--;
             timerSeconds.textContent = timeLeft;
-            timerBar.style.width = `${(timeLeft / totalTime) * 100}%`;
-
+            
+            // 2초 이하일 때 타이머 폰트와 아이콘을 빨간색으로 변경
             if (timeLeft <= 2) {
-                timerBar.classList.remove('bg-danger');
-                timerBar.classList.add('bg-warning');
+                timerSeconds.style.color = '#dc3545'; // 빨간색
+                timerIcon.style.color = '#dc3545'; // 빨간색
+            } else {
+                timerSeconds.style.color = 'white';
+                timerIcon.style.color = 'white';
             }
-
+            
             if (timeLeft <= 0) {
                 clearInterval(timerInterval);
                 handleTimeout();
@@ -190,9 +231,6 @@
     }
 
     function handleTimeout() {
-        // Instantly set timer bar to 0 width
-        timerBar.style.transition = 'none';
-        timerBar.style.width = '0%';
 
         score -= 10; // 시간 초과 시 10점 감점
         scoreDisplay.textContent = score;
@@ -212,6 +250,26 @@
 
         currentQuestionIndex++;
         setTimeout(showNextQuestion, 2000);
+    }
+    
+    function updateProgressBar() {
+        // 첫 문제부터 진행바가 보이도록 계산 수정 (1부터 시작)
+        const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+        const progressBar = document.getElementById('progress-bar');
+        
+        // 프로그레스 바 업데이트
+        progressBar.style.transition = 'width 0.3s ease';
+        progressBar.style.width = `${progress}%`;
+        progressBar.setAttribute('aria-valuenow', progress);
+        
+        // 프로그레스 표시기 업데이트
+        const currentQuestionElement = document.getElementById('current-question');
+        const totalQuestionsElement = document.getElementById('total-questions');
+        
+        if (currentQuestionElement && totalQuestionsElement) {
+            currentQuestionElement.textContent = currentQuestionIndex + 1;
+            totalQuestionsElement.textContent = questions.length;
+        }
     }
 
     function checkAnswer(selectedButton, correctAnswer) {

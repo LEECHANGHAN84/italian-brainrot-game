@@ -4,6 +4,20 @@
 {% block title %}초보 모드{% endblock %}
 
 {% block content %}
+<style>
+    /* 프로그레스 바에 문제 진행도 표시하기 위한 스타일 */
+    .progress-indicator {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        font-weight: bold;
+        text-shadow: 1px 1px 1px rgba(0,0,0,0.3);
+        font-size: 0.8rem;
+        z-index: 10;
+    }
+</style>
 {% call render_quiz_ui('초보 모드', show_timer=False) %}
     <div id="options-container" class="d-grid gap-2 col-12 mx-auto">
         <!-- Option buttons will be inserted here by JS -->
@@ -89,7 +103,23 @@
         const progress = Math.round(((index + 1) / questions.length) * 100);
         progressBar.style.width = `${progress}%`;
         progressBar.setAttribute('aria-valuenow', progress);
-        progressBar.textContent = `${index + 1} / ${questions.length}`;
+        
+        // 프로그레스 바 컨테이너 찾기
+        const progressContainer = progressBar.parentElement;
+        
+        // 기존 프로그레스 표시기 제거
+        let progressIndicator = document.getElementById('progress-indicator');
+        if (!progressIndicator) {
+            // 프로그레스 바에 문제 진행도 표시기 추가
+            progressContainer.style.position = 'relative';
+            progressIndicator = document.createElement('div');
+            progressIndicator.id = 'progress-indicator';
+            progressIndicator.className = 'progress-indicator';
+            progressContainer.appendChild(progressIndicator);
+        }
+        
+        // 프로그레스 표시기 업데이트
+        progressIndicator.textContent = `${index + 1} / ${questions.length}`;
 
         optionsContainer.innerHTML = '';
 

@@ -10,15 +10,16 @@
     .timer-container {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.3rem;
         justify-content: center;
-        margin-bottom: 1rem;
+        margin-bottom: 0.5rem;
+        transform: scale(0.8); /* 전체적으로 20% 축소 */
     }
     #timer-bar-container {
-        width: 200px;
-        height: 15px;
+        width: 60px; /* 70% 축소 (200px에서 60px로) */
+        height: 7px; /* 50% 이상 축소 (15px에서 7px로) */
         background-color: #e9ecef;
-        border-radius: 8px;
+        border-radius: 4px; /* 더 작은 반경 */
         overflow: hidden;
     }
     #timer-bar {
@@ -27,9 +28,45 @@
         background-color: #17a2b8; /* info color */
         transition: width 1s linear;
     }
+    
+    /* 모바일용 타이머 반응형 스타일 */
+    @media (max-width: 767px) {
+        .timer-container {
+            transform: scale(0.7); /* 모바일에서 더 작게 */
+        }
+    }
+    
+    /* 프로그레스 바 내 타이머 스타일 */
+    .progress-timer {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: white;
+        font-weight: bold;
+        font-size: 0.8rem;
+        z-index: 10;
+        text-shadow: 0 0 2px rgba(0, 0, 0, 0.7);
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+    
+    /* 프로그레스 바에 문제 진행도 표시하기 위한 스타일 */
+    .progress-indicator {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        font-weight: bold;
+        text-shadow: 1px 1px 1px rgba(0,0,0,0.3);
+        font-size: 0.8rem;
+        z-index: 10;
+    }
 </style>
     {% call render_quiz_ui('고수 모드', show_timer=False) %}
-        <div id="options-container" class="row g-3 col-10 mx-auto">
+        <div id="options-container" class="d-grid gap-2 col-12 mx-auto">
             <!-- Buttons will be inserted here by JavaScript -->
         </div>
     {% endcall %}
@@ -61,22 +98,36 @@
 
     // --- Core Functions ---
     function createTimerUI() {
-        if (document.getElementById('timer-container')) return;
-
+        // 타이머 슬롯 숨기기
+        if (timerSlot) timerSlot.style.display = 'none';
+        
+        // 프로그레스 바 찾기
+        const progressContainer = document.getElementById('progress-container');
+        if (!progressContainer) return;
+        
+        // 프로그레스 바에 타이머 추가
         const timerContainer = document.createElement('div');
         timerContainer.id = 'timer-container';
-        timerContainer.className = 'timer-container d-flex align-items-center';
+        timerContainer.className = 'progress-timer';
         timerContainer.innerHTML = `
-            <i class="fas fa-stopwatch me-2 text-danger"></i>
-            <div id="timer-bar-container" class="progress" style="width: 100px; height: 15px;">
-                <div id="timer-bar" class="progress-bar bg-danger" role="progressbar" style="width: 100%;"></div>
-            </div>
-            <span id="timer-seconds" class="fw-bold ms-2" style="min-width: 20px;">5</span>
+            <i class="fas fa-stopwatch" style="font-size: 0.7rem;"></i>
+            <span id="timer-seconds">5</span>
         `;
-        timerSlot.appendChild(timerContainer);
-
-        timerBar = document.getElementById('timer-bar');
+        
+        // 프로그레스 바에 타이머 추가
+        progressContainer.style.position = 'relative';
+        progressContainer.appendChild(timerContainer);
+        
+        // 프로그레스 바에 문제 진행도 표시기 추가
+        const progressIndicator = document.createElement('div');
+        progressIndicator.id = 'progress-indicator';
+        progressIndicator.className = 'progress-indicator';
+        progressIndicator.innerHTML = `<span id="current-question">1</span>/<span id="total-questions">0</span>`;
+        progressContainer.appendChild(progressIndicator);
+        
+        // 타이머 요소 참조 업데이트
         timerSeconds = document.getElementById('timer-seconds');
+        timerBar = document.getElementById('progress-bar'); // 프로그레스 바를 타이머 바로 사용
     }
 
     async function startQuiz() {
@@ -121,18 +172,19 @@
         optionsContainer.innerHTML = ''; // Clear previous options
 
         question.options.forEach((optionText, index) => {
-            const buttonWrapper = document.createElement('div');
-            buttonWrapper.className = 'col-6 d-grid';
-
             const button = document.createElement('button');
             button.className = 'btn btn-lg btn-primary';
             button.textContent = `${index + 1}. ${optionText}`;
             button.dataset.answer = optionText; // 정답 비교를 위해 데이터 속성 추가
             button.onclick = () => checkAnswer(button, question.answer);
-
-            buttonWrapper.appendChild(button);
-            optionsContainer.appendChild(buttonWrapper);
+            
+            optionsContainer.appendChild(button);
         });
+        
+        // 글자 수에 따라 폰트 크기 조절
+        setTimeout(() => {
+            adjustFontSizeForButtons();
+        }, 10);
         
         updateProgressBar();
         startTimer();
@@ -142,28 +194,24 @@
         let timeLeft = 5;
         const totalTime = 5;
         
-        timerBar.style.transition = 'none'; // Reset transition for instant change
-        timerBar.style.width = '100%';
-        timerBar.classList.remove('bg-warning');
-        timerBar.classList.add('bg-danger');
+        // 타이머 초기화
+        const timerContainer = document.getElementById('timer-container');
+        const timerIcon = timerContainer.querySelector('i');
         timerSeconds.textContent = timeLeft;
-
-        // Force reflow to apply the reset style immediately
-        void timerBar.offsetWidth;
-
-        // Re-enable transition for the countdown animation
-        timerBar.style.transition = 'width 1s linear';
-
+        
         timerInterval = setInterval(() => {
             timeLeft--;
             timerSeconds.textContent = timeLeft;
-            timerBar.style.width = `${(timeLeft / totalTime) * 100}%`;
-
+            
+            // 2초 이하일 때 타이머 폰트와 아이콘을 빨간색으로 변경
             if (timeLeft <= 2) {
-                timerBar.classList.remove('bg-danger');
-                timerBar.classList.add('bg-warning');
+                timerSeconds.style.color = '#dc3545'; // 빨간색
+                timerIcon.style.color = '#dc3545'; // 빨간색
+            } else {
+                timerSeconds.style.color = 'white';
+                timerIcon.style.color = 'white';
             }
-
+            
             if (timeLeft <= 0) {
                 clearInterval(timerInterval);
                 handleTimeout();
@@ -172,9 +220,6 @@
     }
 
     function handleTimeout() {
-        // Instantly set timer bar to 0 width
-        timerBar.style.transition = 'none';
-        timerBar.style.width = '0%';
 
         score -= 5;
         scoreDisplay.textContent = score;
@@ -226,13 +271,27 @@
         currentQuestionIndex++;
         setTimeout(showNextQuestion, 1200);
     }
-
+    
     function updateProgressBar() {
+        // 첫 문제부터 진행바가 보이도록 계산 수정 (1부터 시작)
         const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+        const progressBar = document.getElementById('progress-bar');
+        
+        // 프로그레스 바 업데이트
+        progressBar.style.transition = 'width 0.3s ease';
         progressBar.style.width = `${progress}%`;
-        progressBar.textContent = `${currentQuestionIndex + 1} / ${questions.length}`;
+        progressBar.setAttribute('aria-valuenow', progress);
+        
+        // 프로그레스 표시기 업데이트
+        const currentQuestionElement = document.getElementById('current-question');
+        const totalQuestionsElement = document.getElementById('total-questions');
+        
+        if (currentQuestionElement && totalQuestionsElement) {
+            currentQuestionElement.textContent = currentQuestionIndex + 1;
+            totalQuestionsElement.textContent = questions.length;
+        }
     }
-
+    
     function endQuiz() {
         clearInterval(timerInterval); // Stop timer when quiz ends
         quizArea.style.display = 'none';
@@ -264,6 +323,62 @@
         mainMenuBtn.innerHTML = '<i class="fas fa-home me-2"></i> 메인 메뉴로';
         endButtons.appendChild(mainMenuBtn);
     }
+
+    // 글자 수에 따라 폰트 크기를 자동으로 조절하는 함수
+    function adjustFontSizeForButtons() {
+        const buttons = optionsContainer.querySelectorAll('.btn');
+        
+        buttons.forEach(button => {
+            // 원래 폰트 크기로 초기화
+            button.style.fontSize = '';
+            button.style.whiteSpace = 'normal';
+            button.style.overflow = 'visible';
+            button.style.textOverflow = 'clip';
+            
+            // 텍스트 길이에 따라 폰트 크기 조절
+            const textLength = button.textContent.length;
+            
+            // 모바일 화면인지 확인
+            const isMobile = window.innerWidth <= 767;
+            
+            // 기본 폰트 크기 (rem 단위)
+            let baseFontSize = isMobile ? 1.035 : 1.15;
+            let reductionFactor = 1.0;
+            
+            // 버튼 최대 너비 설정 (이미지 컨테이너 너비에 맞추기)
+            const imageContainer = document.querySelector('.image-container');
+            if (imageContainer) {
+                const containerWidth = imageContainer.offsetWidth;
+                button.style.maxWidth = `${containerWidth}px`;
+            }
+            
+            // 텍스트 길이에 따라 단계적 폰트 크기 조절 (띄워쓰기 포함 길이 기준)
+            if (textLength >= 21) {
+                // 21자 이상: 기존 폰트 크기의 70%로 설정
+                reductionFactor = 0.7;
+            } else if (textLength >= 16) {
+                // 16-20자: 기존 폰트 크기의 90%로 설정
+                reductionFactor = 0.9;
+            } else {
+                // 15자 이하: 기존 폰트 크기 그대로 유지
+                reductionFactor = 1.0;
+            }
+            
+            // 폰트 크기 적용
+            if (reductionFactor < 1.0) {
+                const newFontSize = baseFontSize * reductionFactor;
+                button.style.fontSize = `${newFontSize}rem`;
+            }
+            
+            // 줄바꿈 없이 한 줄로 표시
+            button.style.whiteSpace = 'normal';
+            button.style.wordBreak = 'keep-all';
+            button.style.wordWrap = 'break-word';
+        });
+    }
+    
+    // 화면 크기 변경 시 버튼 폰트 크기 재조절
+    window.addEventListener('resize', adjustFontSizeForButtons);
 
     // --- Event Listener ---
     document.addEventListener('DOMContentLoaded', startQuiz);
