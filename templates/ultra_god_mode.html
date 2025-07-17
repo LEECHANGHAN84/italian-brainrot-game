@@ -634,13 +634,9 @@
                 // 텍스트 마스킹 적용
                 let displayText;
                 
-                // 정답 옵션이고 백엔드에서 마스킹된 텍스트가 전달되었다면 그것을 사용
-                if (option.name === question.correct_answer && question.text) {
-                    displayText = question.text; // 백엔드에서 전달한 마스킹된 텍스트 사용
-                } else {
-                    // 오답 옵션은 기존 마스킹 함수 사용
-                    displayText = maskText(option.name);
-                }
+                // 모든 옵션(정답 포함)에 동일하게 maskText 함수 적용
+                // ULTRA_GOD 모드에서는 정답도 2글자만 표시하도록 처리
+                displayText = maskText(option.name);
                 
                 button.dataset.maskedText = displayText;
                 button.textContent = `${index + 1}. ${displayText}`;
@@ -784,14 +780,14 @@
             }
         }
         
-        // 전체 글자 수가 4글자 미만이면 그대로 반환
-        if (charPositions.length < 4) {
+        // 전체 글자 수가 2글자 미만이면 그대로 반환
+        if (charPositions.length < 2) {
             return text;
         }
         
-        // 랜덤하게 4글자 선택
+        // 랜덤하게 2글자만 선택 (더 어려운 ULTRA_GOD 모드)
         const selectedIndices = [];
-        while (selectedIndices.length < 4) {
+        while (selectedIndices.length < 2) {
             const randomIndex = Math.floor(Math.random() * charPositions.length);
             const charPos = charPositions[randomIndex];
             
