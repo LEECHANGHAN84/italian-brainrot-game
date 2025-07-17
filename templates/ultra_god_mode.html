@@ -218,10 +218,10 @@
     /* 메모리 게임 스타일 */
     .memory-game-container {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(3, 1fr);
         grid-gap: 15px;
         margin: 0 auto 20px;
-        max-width: 500px;
+        max-width: 600px;
         position: relative;
     }
     
@@ -342,7 +342,7 @@
         box-shadow: 0 15px 35px rgba(0,0,0,0.1) !important;
     }
     
-    /* 이미지 줌 효과를 위한 CSS */
+    /* 이미지 줌 효과를 위한 CSS - 기존 4등분(1/8 보이기) 방식 */
     .image-container.zoomed #character-image {
         transform: scale(4);
     }
@@ -350,6 +350,22 @@
     .image-container.zoomed[data-segment="1"] #character-image { transform-origin: top right; }
     .image-container.zoomed[data-segment="2"] #character-image { transform-origin: bottom left; }
     .image-container.zoomed[data-segment="3"] #character-image { transform-origin: bottom right; }
+    
+    /* 이미지 줌 효과를 위한 CSS - 새로운 9등분(1/9 보이기) 방식 */
+    .image-container.zoomed-masked #character-image {
+        transform: scale(3); /* 3배 확대하여 1/9만 보이도록 함 */
+    }
+    
+    /* 3x3 그리드에서의 위치에 따른 transform-origin 설정 */
+    .image-container.zoomed-masked[data-row="0"][data-col="0"] #character-image { transform-origin: top left; }
+    .image-container.zoomed-masked[data-row="0"][data-col="1"] #character-image { transform-origin: top center; }
+    .image-container.zoomed-masked[data-row="0"][data-col="2"] #character-image { transform-origin: top right; }
+    .image-container.zoomed-masked[data-row="1"][data-col="0"] #character-image { transform-origin: center left; }
+    .image-container.zoomed-masked[data-row="1"][data-col="1"] #character-image { transform-origin: center; }
+    .image-container.zoomed-masked[data-row="1"][data-col="2"] #character-image { transform-origin: center right; }
+    .image-container.zoomed-masked[data-row="2"][data-col="0"] #character-image { transform-origin: bottom left; }
+    .image-container.zoomed-masked[data-row="2"][data-col="1"] #character-image { transform-origin: bottom center; }
+    .image-container.zoomed-masked[data-row="2"][data-col="2"] #character-image { transform-origin: bottom right; }
 </style>
     <!-- 사용자 정보 입력 화면 -->
 <div id="user-info-form" class="container py-5 ultra-god-mode-container">
@@ -562,14 +578,23 @@
             characterImage.src = `/static/uploads/${question.image}`;
             imageContainer.appendChild(characterImage);
             
-            // 이미지가 로드된 후 준 클래스 적용
+            // 이미지가 로드된 후 줌 클래스 적용
             characterImage.onload = () => {
                 const imageContainer = characterImage.closest('.image-container');
-                // 4개의 사분면 (0: TL, 1: TR, 2: BL, 3: BR)
-                const segment = Math.floor(Math.random() * 4);
-                imageContainer.dataset.segment = segment;
-                imageContainer.classList.add('zoomed');
-                question.applied_segment = segment; // 적용된 세그먼트 저장
+                // 9개의 영역 (3x3 그리드)
+                const row = Math.floor(Math.random() * 3); // 0, 1, 2 (상, 중, 하)
+                const col = Math.floor(Math.random() * 3); // 0, 1, 2 (좌, 중, 우)
+                
+                // 데이터 속성 설정
+                imageContainer.dataset.row = row;
+                imageContainer.dataset.col = col;
+                
+                // zoomed 대신 zoomed-masked 클래스 사용 (9등분)
+                imageContainer.classList.add('zoomed-masked');
+                
+                // 적용된 세그먼트 저장 (디버깅 및 참조용)
+                question.applied_row = row;
+                question.applied_col = col;
             };
             
             // 선택지 버튼 생성
@@ -648,7 +673,7 @@
             let matchedPairs = 0;
             let canFlip = true;
             
-            // 카드 생성 (4장의 카드, 모두 같은 캐릭터)
+            // 카드 생성 (6장의 카드, 3쌍의 캐릭터)
             question.cards.forEach(card => {
                 const cardElement = document.createElement('div');
                 cardElement.className = 'memory-card';
@@ -699,8 +724,8 @@
                                 
                                 matchedPairs++;
                                 
-                                // 모든 페어가 매치되었는지 확인 (2페어 = 4장)
-                                if (matchedPairs === 2) {
+                                // 모든 페어가 매치되었는지 확인 (3페어 = 6장)
+                                if (matchedPairs === 3) {
                                     // 메모리 게임 완료 - 정답 처리
                                     setTimeout(() => {
                                         const dummyButton = document.createElement('button');
@@ -849,6 +874,21 @@
         // 일반 문제 타입 처리 (이미지 크롭 또는 마스킹된 텍스트)
         const allButtons = optionsContainer.querySelectorAll('button');
         
+        // 이미지 크롭 문제였다면 전체 이미지 표시
+        if (question.type === 'image_crop') {
+            const characterImage = document.getElementById('character-image');
+            const imageContainer = characterImage.closest('.image-container');
+            
+            // 준 클래스 제거 (기존 4등분 방식)
+            imageContainer.classList.remove('zoomed');
+            delete imageContainer.dataset.segment;
+            
+            // 새로운 9등분 방식 클래스 제거
+            imageContainer.classList.remove('zoomed-masked');
+            delete imageContainer.dataset.row;
+            delete imageContainer.dataset.col;
+        }
+        
         // 문제 타입에 따라 정답 처리
         let correctAnswer = '';
         if (question.options && question.options.length > 0) {
@@ -897,9 +937,14 @@
             const characterImage = document.getElementById('character-image');
             const imageContainer = characterImage.closest('.image-container');
             
-            // 준 클래스 제거
+            // 준 클래스 제거 (기존 4등분 방식)
             imageContainer.classList.remove('zoomed');
             delete imageContainer.dataset.segment;
+            
+            // 새로운 9등분 방식 클래스 제거
+            imageContainer.classList.remove('zoomed-masked');
+            delete imageContainer.dataset.row;
+            delete imageContainer.dataset.col;
         }
         
         // 텍스트 마스킹 문제였다면 원래 텍스트 보이기
