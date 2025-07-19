@@ -67,6 +67,35 @@
         100% { transform: rotate(360deg); }
     }
     
+    /* 프로그레스 바 내 타이머 스타일 */
+    .progress-timer {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: white;
+        font-weight: bold;
+        font-size: 0.8rem;
+        z-index: 10;
+        text-shadow: 0 0 2px rgba(0, 0, 0, 0.7);
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+    
+    /* 프로그레스 바에 문제 진행도 표시하기 위한 스타일 */
+    .progress-indicator {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        font-weight: bold;
+        text-shadow: 1px 1px 1px rgba(0,0,0,0.3);
+        font-size: 0.8rem;
+        z-index: 10;
+    }
+    
     /* 다크 모드 스타일 */
     @media (prefers-color-scheme: dark) {
         .background-pattern {
@@ -337,24 +366,17 @@
         max-width: 100%;
         max-height: 100%;
         object-fit: contain;
-        transition: transform 0.3s ease;
-        border-radius: 15px;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.1) !important;
-    }
-    
-    /* 이미지 줌 효과를 위한 CSS */
-    .image-container.zoomed #character-image {
-        transform: scale(2);
-    }
-    .image-container.zoomed[data-segment="0"] #character-image { transform-origin: top left; }
-    .image-container.zoomed[data-segment="1"] #character-image { transform-origin: top right; }
-    .image-container.zoomed[data-segment="2"] #character-image { transform-origin: bottom left; }
-    .image-container.zoomed[data-segment="3"] #character-image { transform-origin: bottom right; }
-</style>
     <!-- 사용자 정보 입력 화면 -->
-<div id="user-info-form" class="container py-5 god-mode-container">
-    <!-- 배경 패턴 -->
-    <div class="background-pattern"></div>
+    <div id="user-info-form" class="container py-5 god-mode-container">
+        <!-- 배경 패턴 -->
+        <div class="background-pattern"></div>
+        
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                <div class="card shadow user-info-card">
+                    <div class="card-header text-center py-4">
+                        <div class="mode-icon">
+                            <i class="fas fa-crown"></i>
     
     <div class="row justify-content-center">
         <div class="col-md-8 col-lg-6">
@@ -464,16 +486,36 @@
 
     // --- Core Functions ---
     function createTimerUI() {
-        if (document.getElementById('timer-container')) return;
-
+        // 타이머 슬롯 숨기기 (기존 시계 제거)
+        if (timerSlot) timerSlot.style.display = 'none';
+        
+        // 프로그레스 바 찾기
+        const progressContainer = document.getElementById('progress-container');
+        if (!progressContainer) return;
+        
+        // 프로그레스 바에 타이머 추가
         const timerContainer = document.createElement('div');
         timerContainer.id = 'timer-container';
-        timerContainer.className = 'timer-container d-flex align-items-center';
+        timerContainer.className = 'progress-timer';
         timerContainer.innerHTML = `
-            <i class="fas fa-stopwatch me-2" style="color: #5f27cd;"></i>
-            <span id="elapsed-timer" class="fw-bold">00:00</span>
+            <i class="fas fa-stopwatch" style="font-size: 0.7rem;"></i>
+            <span id="timer-seconds">3.00</span>
         `;
-        timerSlot.appendChild(timerContainer);
+        
+        // 프로그레스 바에 타이머 추가
+        progressContainer.style.position = 'relative';
+        progressContainer.appendChild(timerContainer);
+        
+        // 프로그레스 바에 문제 진행도 표시기 추가
+        const progressIndicator = document.createElement('div');
+        progressIndicator.id = 'progress-indicator';
+        progressIndicator.className = 'progress-indicator';
+        progressIndicator.innerHTML = `<span id="current-question">1</span>/<span id="total-questions">${questions.length}</span>`;
+        progressContainer.appendChild(progressIndicator);
+        
+        // 타이머 요소 참조 업데이트
+        timerSeconds = document.getElementById('timer-seconds');
+        timerBar = document.getElementById('progress-bar'); // 프로그레스 바를 타이머 바로 사용
     }
 
     // 폼 제출 이벤트 핸들러 등록
@@ -783,41 +825,6 @@
                 // 나머지 글자는 'O'로 대체
                 result += 'O';
             }
-        }
-        
-        return result;
-    }
-
-    function startElapsedTimer() {
-        const elapsedTimer = document.getElementById('elapsed-timer');
-        if (!elapsedTimer) return;
-        
-        // 기존 타이머 정리
-        clearInterval(timerInterval);
-        
-        // 경과 시간 표시 함수
-        function updateElapsedTime() {
-            if (!startTime) return;
-            
-            const now = new Date();
-            const elapsedMs = now - startTime;
-            const totalSeconds = Math.floor(elapsedMs / 1000); // 총 초 계산
-            const milliseconds = Math.floor((elapsedMs % 1000) / 10); // 밀리초를 2자리로 표시
-            
-            elapsedTimer.textContent = `${totalSeconds}.${milliseconds.toString().padStart(2, '0')}`;
-        }
-        
-        // 초기 시간 표시
-        updateElapsedTime();
-        
-        // 10밀리초마다 경과 시간 업데이트 (100ms)
-        timerInterval = setInterval(updateElapsedTime, 100);
-    }
-
-    function handleTimeout() {
-        timerBar.style.transition = 'none';
-        timerBar.style.width = '0%';
-        score -= 10;
         scoreDisplay.textContent = score;
         showUnifiedStamp('시간초과 -10', false);
 
@@ -934,7 +941,15 @@
     function updateProgressBar() {
         const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
         progressBar.style.width = `${progress}%`;
-        progressBar.textContent = `${currentQuestionIndex + 1} / ${questions.length}`;
+        
+        // 프로그레스 바 내 텍스트 제거 (타이머와 진행 표시기로 대체)
+        progressBar.textContent = '';
+        
+        // 현재 문제 번호 업데이트
+        const currentQuestionElement = document.getElementById('current-question');
+        if (currentQuestionElement) {
+            currentQuestionElement.textContent = currentQuestionIndex + 1;
+        }
     }
 
     function endQuiz() {

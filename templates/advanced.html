@@ -122,7 +122,7 @@
         const progressIndicator = document.createElement('div');
         progressIndicator.id = 'progress-indicator';
         progressIndicator.className = 'progress-indicator';
-        progressIndicator.innerHTML = `<span id="current-question">1</span>/<span id="total-questions">0</span>`;
+        progressIndicator.innerHTML = `<span id="current-question">1</span>/<span id="total-questions">${questions.length}</span>`;
         progressContainer.appendChild(progressIndicator);
         
         // 타이머 요소 참조 업데이트
@@ -281,6 +281,9 @@
         progressBar.style.transition = 'width 0.3s ease';
         progressBar.style.width = `${progress}%`;
         progressBar.setAttribute('aria-valuenow', progress);
+        
+        // 프로그레스 바 내부에 텍스트가 표시되지 않도록 설정
+        progressBar.textContent = '';
         
         // 프로그레스 표시기 업데이트
         const currentQuestionElement = document.getElementById('current-question');

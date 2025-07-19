@@ -10,15 +10,16 @@
     .timer-container {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.3rem;
         justify-content: center;
-        margin-bottom: 1rem;
+        margin-bottom: 0.5rem;
+        transform: scale(0.8); /* 전체적으로 20% 축소 */
     }
     #timer-bar-container {
-        width: 200px;
-        height: 15px;
+        width: 60px; /* 70% 축소 (200px에서 60px로) */
+        height: 7px; /* 50% 이상 축소 (15px에서 7px로) */
         background-color: #e9ecef;
-        border-radius: 8px;
+        border-radius: 4px; /* 더 작은 반경 */
         overflow: hidden;
     }
     #timer-bar {
@@ -27,17 +28,15 @@
         background-color: #17a2b8; /* info color */
         transition: width 1s linear;
     }
-
-    /* 이미지 줌 효과를 위한 CSS */
-    .image-container.zoomed #character-image {
-        transform: scale(2);
-    }
-    .image-container.zoomed[data-segment="0"] #character-image { transform-origin: top left; }
-    .image-container.zoomed[data-segment="1"] #character-image { transform-origin: top right; }
-    .image-container.zoomed[data-segment="2"] #character-image { transform-origin: bottom left; }
-    .image-container.zoomed[data-segment="3"] #character-image { transform-origin: bottom right; }
     
-    /* 타이머를 프로그레스 바 안에 표시하기 위한 스타일 */
+    /* 모바일용 타이머 반응형 스타일 */
+    @media (max-width: 767px) {
+        .timer-container {
+            transform: scale(0.7); /* 모바일에서 더 작게 */
+        }
+    }
+    
+    /* 프로그레스 바 내 타이머 스타일 */
     .progress-timer {
         position: absolute;
         right: 10px;
@@ -45,12 +44,12 @@
         transform: translateY(-50%);
         color: white;
         font-weight: bold;
-        text-shadow: 1px 1px 1px rgba(0,0,0,0.3);
         font-size: 0.8rem;
+        z-index: 10;
+        text-shadow: 0 0 2px rgba(0, 0, 0, 0.7);
         display: flex;
         align-items: center;
-        gap: 4px;
-        z-index: 10;
+        gap: 0.3rem;
     }
     
     /* 프로그레스 바에 문제 진행도 표시하기 위한 스타일 */
@@ -65,9 +64,18 @@
         font-size: 0.8rem;
         z-index: 10;
     }
+    
+    /* 이미지 줄임 효과를 위한 CSS */
+    .image-container.zoomed #character-image {
+        transform: scale(3.0);
+    }
+    .image-container.zoomed[data-segment="0"] #character-image { transform-origin: top left; }
+    .image-container.zoomed[data-segment="1"] #character-image { transform-origin: top right; }
+    .image-container.zoomed[data-segment="2"] #character-image { transform-origin: bottom left; }
+    .image-container.zoomed[data-segment="3"] #character-image { transform-origin: bottom right; }
 </style>
     {% call render_quiz_ui('초고수 모드', show_timer=False) %}
-        <div id="options-container" class="row g-3 col-10 mx-auto">
+        <div id="options-container" class="d-grid gap-2 col-12 mx-auto">
             <!-- Buttons will be inserted here by JavaScript -->
         </div>
     {% endcall %}
@@ -112,20 +120,18 @@
         timerContainer.className = 'progress-timer';
         timerContainer.innerHTML = `
             <i class="fas fa-stopwatch" style="font-size: 0.7rem;"></i>
-            <span id="timer-seconds">5</span>
+            <span id="timer-seconds">3</span>
         `;
         
-        // 프로그레스 바 설정
-        progressContainer.style.position = 'relative';
-        
         // 프로그레스 바에 타이머 추가
+        progressContainer.style.position = 'relative';
         progressContainer.appendChild(timerContainer);
         
         // 프로그레스 바에 문제 진행도 표시기 추가
         const progressIndicator = document.createElement('div');
         progressIndicator.id = 'progress-indicator';
         progressIndicator.className = 'progress-indicator';
-        progressIndicator.innerHTML = `<span id="current-question">1</span>/<span id="total-questions">0</span>`;
+        progressIndicator.innerHTML = `<span id="current-question">1</span>/<span id="total-questions">${questions.length}</span>`;
         progressContainer.appendChild(progressIndicator);
         
         // 타이머 요소 참조 업데이트
@@ -174,7 +180,7 @@
         const imageContainer = characterImage.closest('.image-container');
         characterImage.src = `/static/uploads/${question.image}`;
 
-        // 이미지가 로드된 후 줌 클래스 적용
+        // 이미지가 로드된 후 줄임 클래스 적용
         characterImage.onload = () => {
             // 4개의 사분면 (0: TL, 1: TR, 2: BL, 3: BR)
             const segment = Math.floor(Math.random() * 4);
@@ -184,26 +190,27 @@
         optionsContainer.innerHTML = ''; // Clear previous options
 
         question.options.forEach((optionText, index) => {
-            const buttonWrapper = document.createElement('div');
-            buttonWrapper.className = 'col-6 d-grid';
-
             const button = document.createElement('button');
             button.className = 'btn btn-lg btn-primary';
             button.textContent = `${index + 1}. ${optionText}`;
             button.dataset.answer = optionText; // 정답 비교를 위해 데이터 속성 추가
             button.onclick = () => checkAnswer(button, question.answer);
-
-            buttonWrapper.appendChild(button);
-            optionsContainer.appendChild(buttonWrapper);
+            
+            optionsContainer.appendChild(button);
         });
+        
+        // 글자 수에 따라 폰트 크기 조절
+        setTimeout(() => {
+            adjustFontSizeForButtons();
+        }, 10);
         
         updateProgressBar();
         startTimer();
     }
 
     function startTimer() {
-        let timeLeft = 5;
-        const totalTime = 5;
+        let timeLeft = 3;
+        const totalTime = 3;
         
         // 타이머 초기화
         const timerContainer = document.getElementById('timer-container');
@@ -262,6 +269,9 @@
         progressBar.style.width = `${progress}%`;
         progressBar.setAttribute('aria-valuenow', progress);
         
+        // 프로그레스 바 내부에 텍스트가 표시되지 않도록 설정
+        progressBar.textContent = '';
+        
         // 프로그레스 표시기 업데이트
         const currentQuestionElement = document.getElementById('current-question');
         const totalQuestionsElement = document.getElementById('total-questions');
@@ -306,17 +316,66 @@
         setTimeout(showNextQuestion, 1200);
     }
 
-    function updateProgressBar() {
-        const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
-        progressBar.style.width = `${progress}%`;
-        progressBar.textContent = `${currentQuestionIndex + 1} / ${questions.length}`;
-    }
-
     function revealImage() {
         const imageContainer = characterImage.closest('.image-container');
         imageContainer.classList.remove('zoomed');
     }
 
+    function adjustFontSizeForButtons() {
+        const buttons = optionsContainer.querySelectorAll('.btn');
+        
+        buttons.forEach(button => {
+            // 원래 폰트 크기로 초기화
+            button.style.fontSize = '';
+            button.style.whiteSpace = 'normal';
+            button.style.overflow = 'visible';
+            button.style.textOverflow = 'clip';
+            
+            // 텍스트 길이에 따라 폰트 크기 조절
+            const textLength = button.textContent.length;
+            
+            // 모바일 화면인지 확인
+            const isMobile = window.innerWidth <= 767;
+            
+            // 기본 폰트 크기 (rem 단위)
+            let baseFontSize = isMobile ? 1.035 : 1.15;
+            let reductionFactor = 1.0;
+            
+            // 버튼 최대 너비 설정 (이미지 컨테이너 너비에 맞추기)
+            const imageContainer = document.querySelector('.image-container');
+            if (imageContainer) {
+                const containerWidth = imageContainer.offsetWidth;
+                button.style.maxWidth = `${containerWidth}px`;
+            }
+            
+            // 텍스트 길이에 따라 단계적 폰트 크기 조절 (띄워쓰기 포함 길이 기준)
+            if (textLength >= 21) {
+                // 21자 이상: 기존 폰트 크기의 70%로 설정
+                reductionFactor = 0.7;
+            } else if (textLength >= 16) {
+                // 16-20자: 기존 폰트 크기의 90%로 설정
+                reductionFactor = 0.9;
+            } else {
+                // 15자 이하: 기존 폰트 크기 그대로 유지
+                reductionFactor = 1.0;
+            }
+            
+            // 폰트 크기 적용
+            if (reductionFactor < 1.0) {
+                const newFontSize = baseFontSize * reductionFactor;
+                button.style.fontSize = `${newFontSize}rem`;
+            }
+            
+            // 줄바꿈 없이 한 줄로 표시
+            button.style.whiteSpace = 'normal';
+            button.style.wordBreak = 'keep-all';
+            button.style.wordWrap = 'break-word';
+        });
+    }
+    
+    // 화면 크기 변경 시 버튼 폰트 크기 재조절
+    window.addEventListener('resize', adjustFontSizeForButtons);
+    
     function endQuiz() {
         clearInterval(timerInterval); // Stop timer when quiz ends
         quizArea.style.display = 'none';
@@ -337,7 +396,7 @@
         }
 
         const restartBtn = document.createElement('a');
-        restartBtn.href = "{{ url_for('super_advanced_mode') }}";
+        restartBtn.href = "{{ url_for('god_mode') }}";
         restartBtn.className = 'btn btn-primary btn-lg me-3';
         restartBtn.innerHTML = '<i class="fas fa-redo me-2"></i> 다시하기';
         endButtons.appendChild(restartBtn);
